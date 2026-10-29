@@ -1,0 +1,10 @@
+Use case: stylized-concept
+Asset type: production game navigation illustration sprite sheet, four transparent cutout assets.
+Input image 1 is ONLY the visual style reference from our forest storybook game splash screen. Create new artwork; do not copy its scene or words.
+Primary request: a premium cohesive set of FOUR beautiful small game navigation illustrations. Painterly storybook watercolor/gouache with softly modeled 3D volume, warm honey lighting, sage green, cream, amber and muted teal. Rich handmade materials, clean confident silhouette, charming and polished mobile game art. Readable at 46 pixels tall. All four must have equal visual weight and same rendering style.
+Composition: exactly a 2 by 2 sprite sheet on a genuinely transparent RGBA background. Four equal square cells, each illustration entirely within its own cell, centered with ample transparent padding. No connecting objects. No frames, badges, plaques or background scenery. No contact shadows outside each object.
+Top LEFT: a glossy teal and golden glass marble sitting in a small curved carved wooden pinball launcher with two golden star-shaped pegs. One clear compact focal silhouette, not a whole game screen.
+Top RIGHT: two adorable forest animal companion heads nestled together, a cream rabbit with long ears and a russet fox with tiny green scarf, cheerful expressions.
+Bottom LEFT: an elegant jade green and antique gold protective shield, small central glowing golden star and a short wooden practice sword behind it. Friendly forest adventurer equipment, no violence.
+Bottom RIGHT: a small cozy sage green canvas camping tent with a warm amber lantern beside its entrance. A tiny rolled blanket, compact and welcoming.
+Constraints: ONLY these four objects in this exact order. Real transparent empty space, no checkerboard drawn into image, no white rectangle, no scenery, no words, no numbers, no lettering, no logo, no watermark. No leaves decorating the corners, no oversized foliage. Preserve clean alpha edges and the input image's gentle illustrated aesthetic.

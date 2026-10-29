@@ -1,0 +1,46 @@
+[
+  {
+    "index": 0,
+    "label": "彈珠",
+    "source_bounds": [
+      53,
+      76,
+      603,
+      584
+    ],
+    "asset": "assets\\storybook\\navigation-0-v1.png"
+  },
+  {
+    "index": 1,
+    "label": "夥伴",
+    "source_bounds": [
+      605,
+      49,
+      1238,
+      579
+    ],
+    "asset": "assets\\storybook\\navigation-1-v1.png"
+  },
+  {
+    "index": 2,
+    "label": "守衛",
+    "source_bounds": [
+      56,
+      657,
+      600,
+      1166
+    ],
+    "asset": "assets\\storybook\\navigation-2-v1.png"
+  },
+  {
+    "index": 3,
+    "label": "營地",
+    "source_bounds": [
+      633,
+      634,
+      1240,
+      1169
+    ],
+    "asset": "assets\\storybook\\navigation-3-v1.png"
+  }
+]
