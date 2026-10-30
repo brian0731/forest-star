@@ -495,6 +495,8 @@ jobs:
           shasum -a 256 "${ipas[0]}"
 
       - name: Save IPA and debug symbols
+        # Optional backup: exhausted artifact quota must not block Apple upload.
+        continue-on-error: true
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: forest-star-ios-${{ inputs.build_number }}
@@ -568,6 +570,8 @@ jobs:
 本倉庫已有實際 workflow，不需重複建立。它使用 `tool/prepare_ios_signing.py` 驗證 profile，從 profile 取得 UUID，在 CI 自動將 Runner 的 Release / Profile 設為手動簽章，不需在 Windows 手動猜 profile 名稱。新倉庫複製範本時，也要複製該 Python 工具。
 
 ### 範本的使用範圍
+
+- IPA / dSYM artifact 是額外備份。若 GitHub Artifact 額度已滿，備份失敗不會阻擋 Apple 上傳，但該次 run 可能沒有可下載的 IPA。請分別查看 Artifact 步驟及 Apple 上傳步驟，並自行管理帳戶的備份空間。
 
 - 適用目前只有一個 Runner App、沒有 extensions、沒有 flavor 的專案。新增 Widget / Notification Service 等 target 後，每個 Bundle ID 都需自己的 profile 與 export mapping。
 - 使用 GitHub-hosted runner；清理步驟以每次全新 runner 為前提，不適合直接套在多人共用的 self-hosted Mac。
