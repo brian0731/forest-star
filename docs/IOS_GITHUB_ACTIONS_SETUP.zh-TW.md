@@ -6,6 +6,16 @@
 
 本文件提供已加入倉庫的 iOS 工程、設定步驟與完整 workflow。建置及上傳結果以 GitHub Actions 和 App Store Connect 為準。上傳 TestFlight 後，仍須完成商店資料、選擇 build 與送審，才會公開上架。
 
+### 2026-10-30 實際上傳紀錄
+
+- 版本：`1.8.0 (13)`；Bundle ID：`com.foreststar.foreststar`。
+- [GitHub Actions 執行紀錄](https://github.com/brian0731/forest-star/actions/runs/41009891377)，建置來源 commit：`56b6042`。
+- 雲端分析與遊戲測試、profile 驗證、Apple Distribution 匯入、IPA archive / export 與簽章驗證均成功。
+- Apple 驗證成功，並回覆 `UPLOAD SUCCEEDED with no errors`；此為成功送達 App Store Connect，尚未確認 Apple 背景處理、測試群組開放或公開審核結果。
+- IPA SHA-256：`6340cc339a4b7e0dd2c8284ec0ecf40e8ee74263fdae39e2a24e3797719cf2bc`。
+- 此次 GitHub Artifact 備份受帳戶儲存額度限制，沒有可下載附件；未影響 Apple 上傳。
+- 下一步：App Store Connect → 本 App → TestFlight，等待處理完成、回答實際加密合規問題，再選擇 build 加入測試群組。後續重新上傳使用大於 `13` 的 build number。
+
 ## 1. 這個專案目前的情況
 
 - Flutter 專案已在倉庫根目錄，包含 `pubspec.yaml`、`lib/`、`assets/`、`android/`。
