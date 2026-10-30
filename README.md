@@ -1,5 +1,7 @@
 # 森星小隊 · Flutter / Flame
 
+iOS / TestFlight / App Store：請參閱 [GitHub Actions 上架設定教學](docs/IOS_GITHUB_ACTIONS_SETUP.zh-TW.md)，內含 iOS 工程、Apple 簽章、Secrets 與完整 workflow 範本。
+
 此 GitHub 倉庫的根目錄就是 Flutter 專案，不包含外層 Unity 工程、Prototype 或建置快取。將倉庫下載後，在根目錄執行：
 
 ```powershell

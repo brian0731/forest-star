@@ -66,3 +66,10 @@ app.*.map.json
 !.env.example
 !.env.*.example
 /config/admob.production.json
+
+# Apple signing credentials and local build configuration.
+*.p8
+*.mobileprovision
+*.provisionprofile
+*.ipa
+/ios/Flutter/Signing.xcconfig

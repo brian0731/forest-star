@@ -1,0 +1,200 @@
+name: iOS - Build and TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'New iOS build number (increase after every accepted upload)'
+        required: true
+        default: '13'
+        type: string
+      upload_testflight:
+        description: 'Upload the signed IPA to App Store Connect / TestFlight'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: forest-star-ios-release
+  cancel-in-progress: false
+
+jobs:
+  ios:
+    if: github.ref == 'refs/heads/main'
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+      IOS_BUNDLE_ID: ${{ vars.IOS_BUNDLE_ID }}
+      BUILD_NUMBER: ${{ inputs.build_number }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Validate configuration and select Xcode
+        env:
+          CERT_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -f ios/Runner.xcodeproj/project.pbxproj
+          test -n "$APPLE_TEAM_ID"
+          test "$IOS_BUNDLE_ID" = 'com.foreststar.foreststar'
+          [[ "$BUILD_NUMBER" =~ ^[1-9][0-9]{0,3}$ ]]
+          if [[ -z "$CERT_PASSWORD" ]]; then
+            echo '::error::Set IOS_CERTIFICATE_PASSWORD to the P12 export password.'
+            exit 1
+          fi
+          test -n "$KEYCHAIN_PASSWORD"
+          test -d /Applications/Xcode_26.3.app
+          sudo xcode-select -s /Applications/Xcode_26.3.app/Contents/Developer
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.44.0'
+          channel: stable
+          cache: true
+
+      - name: Dependencies and game checks
+        run: |
+          set -euo pipefail
+          flutter pub get --enforce-lockfile
+          flutter analyze --no-fatal-infos
+          flutter test
+
+      - name: Decode signing files
+        env:
+          CERT_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          PROFILE_BASE64: ${{ secrets.IOS_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64, os
+          from pathlib import Path
+          for key, name in [('CERT_BASE64', 'ios-signing.p12'),
+                            ('PROFILE_BASE64', 'ios-signing.mobileprovision')]:
+              value = ''.join(os.environ.get(key, '').split())
+              if not value:
+                  raise SystemExit(f'Missing signing secret: {key}')
+              (Path(os.environ['RUNNER_TEMP']) / name).write_bytes(
+                  base64.b64decode(value, validate=True))
+          PY
+          security cms -D -i "$RUNNER_TEMP/ios-signing.mobileprovision" \
+            > "$RUNNER_TEMP/ios-profile.plist"
+          python3 tool/prepare_ios_signing.py \
+            --profile-plist "$RUNNER_TEMP/ios-profile.plist" \
+            --profile-file "$RUNNER_TEMP/ios-signing.mobileprovision" \
+            --team "$APPLE_TEAM_ID" --bundle "$IOS_BUNDLE_ID" \
+            --export-plist "$RUNNER_TEMP/ExportOptions.plist"
+
+      - name: Import Apple Distribution identity
+        env:
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.IOS_KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          signing_keychain="$RUNNER_TEMP/forest-star-signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$signing_keychain"
+          security set-keychain-settings -lut 21600 "$signing_keychain"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$signing_keychain"
+          security import "$RUNNER_TEMP/ios-signing.p12" \
+            -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$signing_keychain"
+          security set-key-partition-list -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" "$signing_keychain" >/dev/null
+          security list-keychains -d user -s "$signing_keychain" \
+            "$HOME/Library/Keychains/login.keychain-db"
+
+      - name: Archive and export signed IPA
+        run: |
+          set -euo pipefail
+          flutter build ipa --release \
+            --build-number="$BUILD_NUMBER" \
+            --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+          shopt -s nullglob
+          ipas=(build/ios/ipa/*.ipa)
+          [[ ${#ipas[@]} -eq 1 ]]
+          codesign --verify --deep --strict \
+            build/ios/archive/Runner.xcarchive/Products/Applications/Runner.app
+          shasum -a 256 "${ipas[0]}"
+
+      - name: Save IPA and debug symbols
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: forest-star-ios-${{ inputs.build_number }}
+          path: |
+            build/ios/ipa/*.ipa
+            build/ios/archive/*.xcarchive/dSYMs/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload to App Store Connect
+        if: inputs.upload_testflight
+        env:
+          ASC_KEY_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64, os, re
+          from pathlib import Path
+          key_id = os.environ.get('ASC_KEY_ID', '')
+          value = ''.join(os.environ.get('ASC_KEY_BASE64', '').split())
+          if not re.fullmatch(r'[A-Za-z0-9]+', key_id):
+              raise SystemExit('Missing or invalid ASC_KEY_ID')
+          if not value or not os.environ.get('ASC_ISSUER_ID'):
+              raise SystemExit('Missing App Store Connect API secrets')
+          folder = Path.home() / '.appstoreconnect/private_keys'
+          folder.mkdir(parents=True, exist_ok=True)
+          (folder / f'AuthKey_{key_id}.p8').write_bytes(
+              base64.b64decode(value, validate=True))
+          PY
+          ipas=(build/ios/ipa/*.ipa)
+          xcrun altool --validate-app --type ios --file "${ipas[0]}" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+          xcrun altool --upload-app --type ios --file "${ipas[0]}" \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+          echo 'Upload accepted. Check processing and testing status in App Store Connect.' \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Clean up signing material
+        if: always()
+        run: |
+          security delete-keychain "$RUNNER_TEMP/forest-star-signing.keychain-db" \
+            >/dev/null 2>&1 || true
+          python3 - <<'PY'
+          import os, plistlib
+          from pathlib import Path
+          temp = Path(os.environ['RUNNER_TEMP'])
+          profile_file = temp / 'ios-profile.plist'
+          if profile_file.exists():
+              try:
+                  with profile_file.open('rb') as f:
+                      uuid = plistlib.load(f)['UUID']
+                  for folder in [Path.home() / 'Library/MobileDevice/Provisioning Profiles',
+                                 Path.home() / 'Library/Developer/Xcode/UserData/Provisioning Profiles']:
+                      (folder / f'{uuid}.mobileprovision').unlink(missing_ok=True)
+              except (ValueError, KeyError, plistlib.InvalidFileException):
+                  pass
+          for name in ['ios-signing.p12', 'ios-signing.mobileprovision',
+                       'ios-profile.plist', 'ExportOptions.plist']:
+              (temp / name).unlink(missing_ok=True)
+          folder = Path.home() / '.appstoreconnect/private_keys'
+          if folder.exists():
+              for key in folder.glob('AuthKey_*.p8'):
+                  key.unlink()
+          PY

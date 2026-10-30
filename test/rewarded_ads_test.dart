@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:forest_star/game.dart';
 import 'package:forest_star/game_session.dart';
@@ -78,6 +79,22 @@ const liveSettings = AdSettings(
 );
 
 void main() {
+  test('iOS and Android request their own rewarded test ad units', () async {
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {
+      debugDefaultTargetPlatformOverride = platform;
+      final backend = FakeBackend();
+      final controller = RewardedAdsController(const AdSettings(), backend);
+      await controller.start();
+      expect(
+        backend.requestedId,
+        platform == TargetPlatform.iOS
+            ? 'ca-app-pub-3940256099942544/1712485313'
+            : 'ca-app-pub-3940256099942544/5224354917',
+      );
+      controller.dispose();
+    }
+  });
   TestWidgetsFlutterBinding.ensureInitialized();
   test('retry during startup cannot launch a second initialization', () async {
     final backend = FakeBackend()..configurePending = Completer<void>();

@@ -21,8 +21,13 @@ class AdSettings {
   final String appId, unitId, audience;
   static const testAppId = 'ca-app-pub-3940256099942544~3347511713';
   static const testUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  static const iosTestUnitId = 'ca-app-pub-3940256099942544/1712485313';
   bool get childTreatment => audience != 'general';
-  String get rewardedId => production ? unitId : testUnitId;
+  String get rewardedId => production
+      ? unitId
+      : defaultTargetPlatform == TargetPlatform.iOS
+      ? iosTestUnitId
+      : testUnitId;
   bool get valid =>
       !production ||
       (RegExp(r'^ca-app-pub-\d{16}~\d{10}$').hasMatch(appId) &&

@@ -30,7 +30,10 @@ Future<void> main() async {
   } catch (_) {
     state = GameState();
   }
-  final ads = !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+  final ads =
+      !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS)
       ? RewardedAdsController(
           const AdSettings.environment(),
           GoogleRewardedBackend(),
