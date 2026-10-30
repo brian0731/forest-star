@@ -2,6 +2,8 @@
 
 iOS / TestFlight / App Store：請參閱 [GitHub Actions 上架設定教學](docs/IOS_GITHUB_ACTIONS_SETUP.zh-TW.md)，內含 iOS 工程、Apple 簽章、Secrets 與完整 workflow 範本。
 
+iOS Bundle ID 為 `com.foreststar.foreststar`，採 iOS 15 起、iPhone 直向版面。Actions 的 `iOS - Build and TestFlight` 會依 Secrets 中的 App Store profile 配置簽章、建置 IPA，並可上傳 App Store Connect。iOS 與 Android 分別使用自己的官方測試廣告 ID；目前沒有正式廣告收益。TestFlight 上傳與 App Store 公開發佈分開進行。
+
 此 GitHub 倉庫的根目錄就是 Flutter 專案，不包含外層 Unity 工程、Prototype 或建置快取。將倉庫下載後，在根目錄執行：
 
 ```powershell

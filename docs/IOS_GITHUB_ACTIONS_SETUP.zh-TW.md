@@ -4,7 +4,7 @@
 
 目標流程：準備 iOS 工程與 Apple 簽章 → GitHub Actions 建置 IPA → 上傳 App Store Connect → TestFlight 測試 → 提交 App Store 審核。
 
-本文件提供設定步驟與完整 workflow 範本，尚未執行 Apple 建置或提交。上傳 TestFlight 後，仍須完成商店資料、選擇 build 與送審，才會公開上架。
+本文件提供已加入倉庫的 iOS 工程、設定步驟與完整 workflow。建置及上傳結果以 GitHub Actions 和 App Store Connect 為準。上傳 TestFlight 後，仍須完成商店資料、選擇 build 與送審，才會公開上架。
 
 ## 1. 這個專案目前的情況
 
@@ -89,7 +89,7 @@ open ios/Runner.xcworkspace
 
 ### 4.1 先配置 Info.plist
 
-即使目前 Dart 還沒有啟用 iOS 廣告，專案仍引用 `google_mobile_ads`。先依官方指引在 `ios/Runner/Info.plist` 的主 `<dict>` 中加入：
+專案已啟用 iOS 測試廣告，並在 `ios/Runner/Info.plist` 的主 `<dict>` 中加入：
 
 ```xml
 <key>GADApplicationIdentifier</key>
