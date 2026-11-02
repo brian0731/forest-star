@@ -13,6 +13,7 @@ import 'game_session.dart';
 import 'forest_flame_game.dart';
 import 'rewarded_ads.dart';
 import 'privacy_page.dart';
+import 'game_tutorial.dart';
 export 'storybook_ui.dart' show GamePainter;
 export 'forest_flame_game.dart' show campSprites, campSpriteBounds;
 
@@ -157,6 +158,23 @@ class _ForestStarAppState extends State<ForestStarApp>
     }
   }
 
+  Future<void> _showTutorial() async {
+    if (_dialogOpen || widget.ads?.busy == true || !session.foreground) return;
+    _dialogOpen = true;
+    session.setExternalOverlay(true, source: 'tutorial');
+    try {
+      await _navigator.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => GameTutorialPage(prefs: widget.prefs),
+        ),
+      );
+      if (mounted) setState(() {});
+    } finally {
+      if (mounted) session.setExternalOverlay(false, source: 'tutorial');
+      _dialogOpen = false;
+    }
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
     session.setForeground(lifecycle == AppLifecycleState.resumed);
@@ -185,6 +203,9 @@ class _ForestStarAppState extends State<ForestStarApp>
       body: !started
           ? StartScreen(
               onPrivacy: () => unawaited(_showPrivacy()),
+              onTutorial: () => unawaited(_showTutorial()),
+              tutorialCompleted:
+                  widget.prefs.getBool(tutorialCompletedKey) ?? false,
               onStart: () {
                 session.click();
                 setState(() => started = true);
@@ -216,6 +237,17 @@ class _ForestStarAppState extends State<ForestStarApp>
                       ),
                     ),
                     Positioned(
+                      left: 8,
+                      top: 0,
+                      child: SafeArea(
+                        child: IconButton.filledTonal(
+                          tooltip: '遊戲教學・中 / English / 粵',
+                          onPressed: () => unawaited(_showTutorial()),
+                          icon: const Icon(Icons.school_rounded, size: 21),
+                        ),
+                      ),
+                    ),
+                    Positioned(
                       right: 8,
                       top: 0,
                       child: SafeArea(
@@ -238,9 +270,17 @@ class _ForestStarAppState extends State<ForestStarApp>
 }
 
 class StartScreen extends StatefulWidget {
-  const StartScreen({super.key, required this.onStart, this.onPrivacy});
+  const StartScreen({
+    super.key,
+    required this.onStart,
+    this.onPrivacy,
+    this.onTutorial,
+    this.tutorialCompleted = false,
+  });
   final VoidCallback onStart;
   final VoidCallback? onPrivacy;
+  final VoidCallback? onTutorial;
+  final bool tutorialCompleted;
 
   @override
   State<StartScreen> createState() => _StartScreenState();
@@ -337,6 +377,21 @@ class _StartScreenState extends State<StartScreen>
                     ),
                   ),
                 ),
+                if (widget.onTutorial != null)
+                  FilledButton.tonalIcon(
+                    key: const ValueKey('start_tutorial'),
+                    onPressed: widget.onTutorial,
+                    icon: const Icon(Icons.school_rounded, size: 20),
+                    label: Text(
+                      widget.tutorialCompleted
+                          ? '重溫遊戲教學'
+                          : '新手教學 · 中 / English / 粵',
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xfff9eed1),
+                      foregroundColor: const Color(0xff28523b),
+                    ),
+                  ),
                 if (widget.onPrivacy != null)
                   TextButton(
                     onPressed: widget.onPrivacy,

@@ -1,5 +1,7 @@
 # 森星小隊 · Flutter / Flame
 
+遊戲教學：開始畫面的「新手教學」，或遊戲左上角的學士帽圖示，可重播十步互動教學。使用 `tutorial_coach_mark` 聚焦實際遊戲位置，在獨立練習世界示範彈珠、六籃育成、升級、進化、四路守衛及免費補給，不寫入正式存檔。詳見 [教學及裝置朗讀設定](docs/GAME_TUTORIAL.zh-TW.md)。
+
 iOS / TestFlight / App Store：請參閱 [GitHub Actions 上架設定教學](docs/IOS_GITHUB_ACTIONS_SETUP.zh-TW.md)，內含 iOS 工程、Apple 簽章、Secrets 與完整 workflow 範本。
 
 iOS Bundle ID 為 `com.foreststar.foreststar`，採 iOS 15 起、iPhone 直向版面。Actions 的 `iOS - Build and TestFlight` 會依 Secrets 中的 App Store profile 配置簽章、建置 IPA，並可上傳 App Store Connect。iOS 與 Android 分別使用自己的官方測試廣告 ID；目前沒有正式廣告收益。TestFlight 上傳與 App Store 公開發佈分開進行。

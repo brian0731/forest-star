@@ -75,6 +75,7 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("upload")
+            proguardFiles("proguard-rules.pro")
         }
     }
 }

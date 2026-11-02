@@ -11,7 +11,7 @@ import 'interaction_motion.dart';
 
 /// Persistent game rules, independent of Flutter rebuilds and display refresh rate.
 class GameSession {
-  GameSession(this.state, this.prefs, this.audio) {
+  GameSession(this.state, this.prefs, this.audio, {this.persist = true}) {
     audio.setScene(MusicScene.camp);
     audio.setEnabled(state.sound);
     pinball.onHit = (amount) {
@@ -87,6 +87,9 @@ class GameSession {
   GameState state;
   final SharedPreferences prefs;
   final GameAudio audio;
+
+  /// Practice sessions use independent state and never write the player's save.
+  final bool persist;
   final pinball = Pinball(), combat = Combat();
   final motion = InteractionMotion();
   final effects = Queue<VfxEvent>();
@@ -160,11 +163,17 @@ class GameSession {
   }
 
   void save() {
+    if (!persist) return;
     _saveTimer?.cancel();
     _saveTimer = Timer(const Duration(milliseconds: 100), flush);
   }
 
-  void flush() => prefs.setString('forest_star_v1', jsonEncode(state.toJson()));
+  void flush() {
+    if (persist) {
+      prefs.setString('forest_star_v1', jsonEncode(state.toJson()));
+    }
+  }
+
   void setForeground(bool value) {
     _lifecycleActive = value;
     _syncForeground();
