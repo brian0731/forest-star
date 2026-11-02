@@ -191,6 +191,7 @@ class _GameTutorialPageState extends State<GameTutorialPage>
   final _surface = GlobalKey();
   final _cardRevision = ValueNotifier(0);
   TutorialCoachMark? _coach;
+  Animation<double>? _entranceAnimation;
   int _step = 0, _presentation = 0;
   bool _ready = false, _busy = false, _closing = false, _active = true;
   String tr(String zh, String en) =>
@@ -220,17 +221,33 @@ class _GameTutorialPageState extends State<GameTutorialPage>
 
   void _present() {
     final presentation = ++_presentation;
+    _entranceAnimation?.removeStatusListener(_onEntranceStatus);
+    _entranceAnimation = null;
     _coach?.removeOverlayEntry();
     _coach = null;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || _closing || _busy || presentation != _presentation) {
         return;
       }
+      // iOS slides this route in. Measuring during the transition freezes that
+      // temporary horizontal offset into the root-overlay spotlight.
+      final animation = ModalRoute.of(context)?.animation;
+      if (animation != null && animation.status != AnimationStatus.completed) {
+        _entranceAnimation = animation;
+        animation.addStatusListener(_onEntranceStatus);
+        return;
+      }
       final box = _surface.currentContext?.findRenderObject() as RenderBox?;
       final layout = _game.layout;
       if (box == null || layout == null || !_ready) return;
       final lesson = tutorialLessons[_step];
-      final offset = box.localToGlobal(layout.toScreen(lesson.focus.topLeft));
+      final overlay =
+          Overlay.of(context, rootOverlay: true).context.findRenderObject()
+              as RenderBox;
+      final offset = box.localToGlobal(
+        layout.toScreen(lesson.focus.topLeft),
+        ancestor: overlay,
+      );
       final size = lesson.focus.size * layout.scale;
       final screen = MediaQuery.sizeOf(context);
       final safe = MediaQuery.paddingOf(context);
@@ -292,6 +309,12 @@ class _GameTutorialPageState extends State<GameTutorialPage>
       _read();
     });
     WidgetsBinding.instance.ensureVisualUpdate();
+  }
+
+  void _onEntranceStatus(AnimationStatus status) {
+    if (status == AnimationStatus.completed && mounted && !_closing) {
+      _present();
+    }
   }
 
   Widget _buildCard({required VoidCallback coachNext}) => Material(
@@ -546,6 +569,7 @@ class _GameTutorialPageState extends State<GameTutorialPage>
   void dispose() {
     _closing = true;
     _presentation++;
+    _entranceAnimation?.removeStatusListener(_onEntranceStatus);
     WidgetsBinding.instance.removeObserver(this);
     _coach?.removeOverlayEntry();
     _narrator.removeListener(_refreshCard);

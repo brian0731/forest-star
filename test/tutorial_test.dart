@@ -14,6 +14,7 @@ import 'package:forest_star/main.dart';
 import 'package:forest_star/storybook_ui.dart';
 import 'package:forest_star/tutorial_narrator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tutorial_coach_mark/src/widgets/tutorial_coach_mark_widget.dart';
 import 'start_screen_test.dart' show FakeAudio, enterGame;
 
 class FakeNarrator extends TutorialNarrator {
@@ -276,6 +277,93 @@ void main() {
       narrator.dispose();
     },
   );
+
+  for (final device in [
+    (const Size(1179, 2556), 3.0, const FakeViewPadding(top: 177, bottom: 102)),
+    (const Size(1290, 2796), 3.0, const FakeViewPadding(top: 177, bottom: 102)),
+    (const Size(750, 1334), 2.0, const FakeViewPadding(top: 40)),
+  ]) {
+    testWidgets(
+      'iOS slide-in keeps lesson 01 on the marble house ${device.$1}',
+      (tester) async {
+        tester.view.physicalSize = device.$1;
+        tester.view.devicePixelRatio = device.$2;
+        tester.view.padding = device.$3;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        addTearDown(tester.view.resetPadding);
+        SharedPreferences.setMockInitialValues({});
+        final prefs = await SharedPreferences.getInstance();
+        final narrator = FakeNarrator();
+        // Preload like reopening the tutorial from an already running game.
+        await tester.runAsync(() => StoryArt.instance.load());
+        await tester.pumpWidget(
+          MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              platform: TargetPlatform.iOS,
+              fontFamily: 'ForestUI',
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: const Color(0xff426b48),
+              ),
+            ),
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) =>
+                          GameTutorialPage(prefs: prefs, narrator: narrator),
+                    ),
+                  ),
+                  child: const Text('Learn'),
+                ),
+              ),
+            ),
+          ),
+        );
+        late ForestFlameGame game;
+        await tester.runAsync(() async {
+          await tester.tap(find.text('Learn'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
+          game = tester
+              .widget<GameWidget<ForestFlameGame>>(
+                find.byType(GameWidget<ForestFlameGame>),
+              )
+              .game!;
+          await game.toBeLoaded();
+        });
+        await frames(tester, 24);
+        final coach = tester.widget<TutorialCoachMarkWidget>(
+          find.byType(TutorialCoachMarkWidget),
+        );
+        final target = coach.targets.single.targetPosition!;
+        final surface = tester.renderObject<RenderBox>(
+          find.byType(GameWidget<ForestFlameGame>),
+        );
+        final house = game.locations.first;
+        // The spotlight's bottom center must meet the rendered house's anchor.
+        final expected = surface.localToGlobal(
+          house.absolutePosition.toOffset(),
+        );
+        final highlighted = target.offset & target.size;
+        expect(highlighted.center.dx, closeTo(expected.dx, 2));
+        expect(highlighted.bottom, closeTo(expected.dy, 3));
+        expect(
+          highlighted.overlaps(
+            tester.getRect(find.byKey(const ValueKey('tutorial_next'))),
+          ),
+          isFalse,
+        );
+        await capture(tester, '01-camp-ios-${device.$1.width.toInt()}');
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+        await frames(tester, 2);
+        narrator.dispose();
+      },
+    );
+  }
 
   for (final size in [const Size(360, 640), const Size(1366, 1024)]) {
     testWidgets(
