@@ -72,14 +72,20 @@ void main() {
 
   test('Cantonese voice selection does not substitute Mandarin', () {
     final voices = [
-      {'name': 'Mandarin', 'locale': 'zh-CN'},
-      {'name': 'English', 'locale': 'en-US'},
+      {'name': 'Mandarin', 'locale': 'zh-CN', 'gender': 'female'},
+      {'name': 'English', 'locale': 'en-US', 'gender': 'female'},
       {
         'name': 'Cantonese network',
         'locale': 'yue-HK',
         'network_required': '1',
+        'gender': 'female',
       },
-      {'name': 'Cantonese offline', 'locale': 'zh_HK', 'network_required': '0'},
+      {
+        'name': 'Cantonese offline',
+        'locale': 'zh_HK',
+        'network_required': '0',
+        'gender': 'female',
+      },
     ];
     expect(
       selectTutorialVoice(voices, TutorialLanguage.cantonese)?['name'],
@@ -94,6 +100,94 @@ void main() {
       'Mandarin',
     );
   });
+
+  for (final language in TutorialLanguage.values) {
+    test(
+      '${language.name} selects female ahead of default/offline male voices',
+      () {
+        final voices = [
+          {'name': 'Default male', 'locale': language.code, 'gender': 'male'},
+          {'name': 'Unknown', 'locale': language.code},
+          {
+            'name': 'Female online',
+            'locale': language.code,
+            'gender': 'female',
+            'network_required': '1',
+          },
+        ];
+        expect(selectTutorialVoice(voices, language)?['name'], 'Female online');
+        expect(selectTutorialVoice(voices.take(2), language), isNull);
+      },
+    );
+  }
+
+  test(
+    'Google female IDs require Google engine and exclude male/default aliases',
+    () {
+      for (final (language, female, male) in [
+        (TutorialLanguage.chinese, 'cmn-tw-x-ctc-local', 'cmn-tw-x-ctd-local'),
+        (TutorialLanguage.english, 'en-us-x-tpf-local', 'en-us-x-tpd-local'),
+        (
+          TutorialLanguage.cantonese,
+          'yue-hk-x-yuc-local',
+          'yue-hk-x-yuf-local',
+        ),
+      ]) {
+        final voices = [
+          {'name': male, 'locale': language.code},
+          {'name': '${language.code}-language', 'locale': language.code},
+          {'name': female, 'locale': language.code},
+        ];
+        expect(selectTutorialVoice(voices, language), isNull);
+        expect(
+          selectTutorialVoice(voices, language, googleEngine: true)?['name'],
+          female,
+        );
+        expect(
+          selectTutorialVoice(voices.take(2), language, googleEngine: true),
+          isNull,
+        );
+        expect(
+          selectTutorialVoice(
+            [
+              {'name': female, 'locale': language.code, 'gender': 'male'},
+            ],
+            language,
+            googleEngine: true,
+          ),
+          isNull,
+        );
+      }
+    },
+  );
+
+  test(
+    'female voices requiring a download are excluded; legacy female names work',
+    () {
+      expect(
+        selectTutorialVoice([
+          {
+            'name': 'Not downloaded',
+            'locale': 'en-US',
+            'gender': 'female',
+            'features': 'notInstalled\tnetworkRetriesCount',
+          },
+        ], TutorialLanguage.english),
+        isNull,
+      );
+      expect(
+        selectTutorialVoice(
+          [
+            {'name': 'en-us-x-sfg#male_1-local', 'locale': 'en-US'},
+            {'name': 'en-us-x-sfg#female_1-local', 'locale': 'en-US'},
+          ],
+          TutorialLanguage.english,
+          googleEngine: true,
+        )?['name'],
+        'en-us-x-sfg#female_1-local',
+      );
+    },
+  );
 
   test(
     'practice rewards, pause and disposal never overwrite the player save',
@@ -118,19 +212,26 @@ void main() {
   group('native speech adapter', () {
     const channel = MethodChannel('flutter_tts');
     final calls = <MethodCall>[];
+    late List<Map<String, String>> availableVoices;
+    var voiceSelectionResult = 1;
     setUp(() {
       calls.clear();
+      voiceSelectionResult = 1;
+      availableVoices = [
+        {'name': 'yue-hk-x-yuf-local', 'locale': 'yue-HK'},
+        {'name': 'yue-hk-x-yuc-local', 'locale': 'yue-HK'},
+        {'name': 'en-us-x-tpf-local', 'locale': 'en-US'},
+      ];
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(channel, (call) async {
             calls.add(call);
             return switch (call.method) {
               'getEngines' => ['com.google.android.tts'],
-              'getVoices' => [
-                {'name': 'Cantonese', 'locale': 'yue-HK'},
-                {'name': 'English', 'locale': 'en-US'},
-              ],
-              'isLanguageAvailable' => false,
+              'getVoices' => availableVoices,
+              // Even if a language exists, its default might be male.
+              'isLanguageAvailable' => true,
+              'setVoice' => voiceSelectionResult,
               _ => 1,
             };
           });
@@ -156,11 +257,48 @@ void main() {
         isTrue,
       );
       expect(calls.where((c) => c.method == 'speak').length, 1);
+      expect(
+        calls.firstWhere((c) => c.method == 'setVoice').arguments['name'],
+        'yue-hk-x-yuc-local',
+      );
       await narrator.speak('中文', TutorialLanguage.chinese);
       expect(narrator.status, NarrationStatus.unavailable);
       expect(calls.where((c) => c.method == 'speak').length, 1);
       narrator.dispose();
     });
+    test(
+      'missing female voice never speaks a male default; Replay detects download',
+      () async {
+        availableVoices = [
+          {'name': 'Male', 'locale': 'en-US', 'gender': 'male'},
+        ];
+        final narrator = DeviceTutorialNarrator();
+        await narrator.speak('Hello', TutorialLanguage.english);
+        expect(narrator.status, NarrationStatus.unavailable);
+        expect(calls.where((c) => c.method == 'speak'), isEmpty);
+        availableVoices = [
+          {'name': 'en-us-x-tpf-local', 'locale': 'en-US'},
+        ];
+        await narrator.speak('Hello again', TutorialLanguage.english);
+        expect(
+          calls.lastWhere((c) => c.method == 'setVoice').arguments['name'],
+          'en-us-x-tpf-local',
+        );
+        expect(calls.where((c) => c.method == 'speak').length, 1);
+        narrator.dispose();
+      },
+    );
+    test(
+      'failed female selection does not fall back to the system voice',
+      () async {
+        voiceSelectionResult = 0;
+        final narrator = DeviceTutorialNarrator();
+        await narrator.speak('Hello', TutorialLanguage.english);
+        expect(narrator.status, NarrationStatus.unavailable);
+        expect(calls.where((c) => c.method == 'speak'), isEmpty);
+        narrator.dispose();
+      },
+    );
     test(
       'rapid switch only speaks the latest language; stop cancels pending speech',
       () async {
@@ -182,10 +320,30 @@ void main() {
       'iOS configures native speech without requesting an Android engine',
       () async {
         debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+        availableVoices = [
+          {
+            'name': 'Aaron',
+            'locale': 'en-US',
+            'gender': 'male',
+            'identifier': 'test.male.en-US',
+          },
+          {
+            'name': 'Samantha',
+            'locale': 'en-US',
+            'gender': 'female',
+            'identifier': 'test.female.en-US',
+          },
+        ];
         final narrator = DeviceTutorialNarrator();
         await narrator.speak('Hello', TutorialLanguage.english);
         expect(calls.any((c) => c.method == 'setSharedInstance'), isTrue);
         expect(calls.any((c) => c.method == 'setEngine'), isFalse);
+        expect(
+          calls
+              .firstWhere((c) => c.method == 'setVoice')
+              .arguments['identifier'],
+          'test.female.en-US',
+        );
         narrator.dispose();
       },
     );

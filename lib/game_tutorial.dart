@@ -447,8 +447,8 @@ class _GameTutorialPageState extends State<GameTutorialPage>
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Text(
                         tr(
-                          '未能使用此語音。請在裝置的語音設定下載對應語言，之後點「再聽一次」；文字教學仍可繼續。',
-                          'Voice unavailable. Install this language in device speech settings, then tap Replay. You can continue with text.',
+                          '未能使用此語言的女聲。請在裝置的語音設定下載對應女聲，之後點「再聽一次」；文字教學仍可繼續。',
+                          'Female voice unavailable. Download a female voice for this language in device speech settings, then tap Replay. You can continue with text.',
                         ),
                         style: const TextStyle(
                           fontSize: 12,

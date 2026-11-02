@@ -18,12 +18,50 @@ enum TutorialLanguage {
 
 enum NarrationStatus { idle, preparing, speaking, unavailable, failed }
 
-/// Select only voices for the requested language; Cantonese never falls back
-/// to Mandarin. Prefer an installed offline voice when one is advertised.
+// Android's Voice API has no gender field. Only use these named Google voices
+// when that engine was selected; never assume a mutable '*-language' alias is
+// female. Local voice mappings: RT-Voice PRO 2024.1.1, pp. 42–46:
+// https://www.crosstales.com/media/data/assets/rtvoice/RTVoice-doc.pdf
+const _googleFemaleVoiceIds = {
+  'cmn-tw-x-ctc',
+  'cmn-cn-x-ccc',
+  'cmn-cn-x-ssa',
+  'en-us-x-iob',
+  'en-us-x-iog',
+  'en-us-x-sfg',
+  'en-us-x-tpc',
+  'en-us-x-tpf',
+  'en-gb-x-fis',
+  'en-gb-x-gba',
+  'en-gb-x-gbc',
+  'en-gb-x-gbg',
+  'en-au-x-afh',
+  'en-au-x-aua',
+  'en-au-x-auc',
+  'yue-hk-x-jar',
+  'yue-hk-x-yuc',
+  'yue-hk-x-yue',
+};
+
+bool _isFemaleVoice(Map<String, dynamic> voice, bool googleEngine) {
+  final gender = '${voice['gender'] ?? ''}'.trim().toLowerCase();
+  if (gender == 'female') return true;
+  if (gender == 'male') return false;
+  final name = '${voice['name'] ?? ''}'.toLowerCase();
+  if (!googleEngine) return false;
+  // Older Google voice names explicitly include '#female_1', etc.
+  if (RegExp(r'#female_\d+-(local|network)$').hasMatch(name)) return true;
+  final id = name.replaceFirst(RegExp(r'-(local|network)$'), '');
+  return _googleFemaleVoiceIds.contains(id);
+}
+
+/// Select a female voice for the requested language, preferring offline voices.
+/// Unknown gender and male voices are excluded; Cantonese never uses Mandarin.
 Map<String, String>? selectTutorialVoice(
   Iterable<Map<String, dynamic>> voices,
-  TutorialLanguage language,
-) {
+  TutorialLanguage language, {
+  bool googleEngine = false,
+}) {
   String normalize(String value) => value.replaceAll('_', '-').toLowerCase();
   final locales = switch (language) {
     TutorialLanguage.chinese => ['zh-tw', 'cmn-tw', 'zh-cn', 'cmn-cn', 'zh-sg'],
@@ -31,6 +69,11 @@ Map<String, String>? selectTutorialVoice(
     TutorialLanguage.cantonese => ['yue-hk', 'zh-hk', 'yue'],
   };
   final matches = voices.where((voice) {
+    final features = '${voice['features'] ?? ''}'.toLowerCase();
+    if (features.contains('notinstalled') ||
+        !_isFemaleVoice(voice, googleEngine)) {
+      return false;
+    }
     final locale = normalize('${voice['locale'] ?? ''}');
     return locales.contains(locale) ||
         (language == TutorialLanguage.english && locale.startsWith('en-')) ||
@@ -67,6 +110,7 @@ class DeviceTutorialNarrator extends TutorialNarrator {
   Future<List<Map<String, dynamic>>>? _voices;
   int _generation = 0;
   bool _disposed = false;
+  bool _googleEngine = false;
   NarrationStatus _status = NarrationStatus.idle;
   @override
   NarrationStatus get status => _status;
@@ -81,10 +125,13 @@ class DeviceTutorialNarrator extends TutorialNarrator {
       future.timeout(const Duration(seconds: 8));
 
   Future<List<Map<String, dynamic>>> _initialize() async {
+    _googleEngine = false;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
       final engines = await _bounded(_tts.getEngines);
       if (engines is List && engines.contains('com.google.android.tts')) {
+        // flutter_tts 4.2.5 discards setEngine's native return value.
         await _bounded(_tts.setEngine('com.google.android.tts'));
+        _googleEngine = true;
       }
     }
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) {
@@ -121,42 +168,29 @@ class DeviceTutorialNarrator extends TutorialNarrator {
       try {
         final voices = await (_voices ??= _initialize());
         if (_disposed || generation != _generation) return;
-        final voice = selectTutorialVoice(voices, language);
-        String? locale = voice?['locale'];
-        if (locale == null) {
-          final candidates = switch (language) {
-            TutorialLanguage.chinese => ['zh-TW', 'zh-CN'],
-            TutorialLanguage.english => ['en-US', 'en-GB'],
-            TutorialLanguage.cantonese => ['yue-HK', 'zh-HK'],
-          };
-          for (final candidate in candidates) {
-            final available = await _bounded(
-              _tts.isLanguageAvailable(candidate),
-            );
-            if (_disposed || generation != _generation) return;
-            if (available == true || available == 1) {
-              locale = candidate;
-              break;
-            }
-          }
-        }
-        if (locale == null) {
+        final voice = selectTutorialVoice(
+          voices,
+          language,
+          googleEngine: _googleEngine,
+        );
+        if (voice == null) {
+          _voices = null; // Replay rechecks voices after a download.
           _setStatus(NarrationStatus.unavailable);
           return;
         }
-        final configured = await _bounded(_tts.setLanguage(locale));
+        final configured = await _bounded(_tts.setLanguage(voice['locale']!));
         if (_disposed || generation != _generation) return;
         if (configured == 0 || configured == false) {
+          _voices = null;
           _setStatus(NarrationStatus.unavailable);
           return;
         }
-        if (voice != null) {
-          final selected = await _bounded(_tts.setVoice(voice));
-          if (_disposed || generation != _generation) return;
-          if (selected == 0 || selected == false) {
-            _setStatus(NarrationStatus.unavailable);
-            return;
-          }
+        final selected = await _bounded(_tts.setVoice(voice));
+        if (_disposed || generation != _generation) return;
+        if (selected == 0 || selected == false) {
+          _voices = null;
+          _setStatus(NarrationStatus.unavailable);
+          return;
         }
         if (_disposed || generation != _generation) return;
         _setStatus(NarrationStatus.speaking);
