@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,6 +80,42 @@ const liveSettings = AdSettings(
 );
 
 void main() {
+  test(
+    'iOS release config requests the publisher rewarded unit after consent',
+    () async {
+      final config =
+          jsonDecode(
+                File('config/admob.ios.production.json').readAsStringSync(),
+              )
+              as Map<String, dynamic>;
+      final settings = AdSettings(
+        production: config['ADMOB_PRODUCTION'] as bool,
+        appId: config['ADMOB_APP_ID'] as String,
+        unitId: config['ADMOB_REWARDED_ID'] as String,
+        audience: config['ADMOB_AUDIENCE'] as String,
+      );
+      expect(settings.valid, isTrue);
+      expect(settings.childTreatment, isTrue);
+      expect(settings.appId, 'ca-app-pub-7872649564668474~3617467257');
+      const compiled = AdSettings.environment();
+      if (compiled.production) {
+        expect(compiled.appId, settings.appId);
+        expect(compiled.unitId, settings.unitId);
+        expect(compiled.audience, settings.audience);
+      }
+      final backend = FakeBackend();
+      final ads = RewardedAdsController(settings, backend);
+      await ads.start();
+      expect(backend.requestedId, 'ca-app-pub-7872649564668474/6817511518');
+      expect(backend.configured!.childTreatment, isTrue);
+      expect(ads.ready, isTrue);
+      var marbles = 0;
+      backend.slots.single.rewardCalls = 2;
+      expect(await ads.show(() => marbles += 12), isTrue);
+      expect(marbles, 12);
+      ads.dispose();
+    },
+  );
   test('iOS and Android request their own rewarded test ad units', () async {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
     for (final platform in [TargetPlatform.iOS, TargetPlatform.android]) {

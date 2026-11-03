@@ -21,7 +21,7 @@ class PolicyText(HTMLParser):
 
 parser = PolicyText()
 parser.feed(SOURCE.read_text(encoding='utf-8'))
-text = '森星小隊 隱私權政策\n生效及最後更新：2026 年 10 月 29 日\n套件名稱：com.foreststar.forest_star\n' + ''.join(parser.parts)
+text = '森星小隊 隱私權政策\n生效及最後更新：2026 年 11 月 3 日\nAndroid 套件名稱：com.foreststar.forest_star\niOS Bundle ID：com.foreststar.foreststar\n' + ''.join(parser.parts)
 target = ROOT / 'assets/privacy-policy.txt'
 target.write_text(text.strip() + '\n', encoding='utf-8')
 print(f'Exported {target.name}: {len(text)} characters')

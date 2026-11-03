@@ -1,6 +1,8 @@
 # 森星小隊：Flutter iOS · GitHub Actions 上架設定教學
 
-更新日期：2026-10-30。適用倉庫：[brian0731/forest-star](https://github.com/brian0731/forest-star)。
+更新日期：2026-11-03。適用倉庫：[brian0731/forest-star](https://github.com/brian0731/forest-star)。
+
+Build 19 起，實際 workflow 使用正式 iOS AdMob 設定，並同時注入原生 Info.plist 及 Dart 編譯參數；詳細識別碼、驗收及帳戶設定見 [iOS AdMob 接入](IOS_ADMOB.zh-TW.md)。下方早期測試版紀錄及範本不代表目前正式廣告設定。
 
 目標流程：準備 iOS 工程與 Apple 簽章 → GitHub Actions 建置 IPA → 上傳 App Store Connect → TestFlight 測試 → 提交 App Store 審核。
 
@@ -110,7 +112,7 @@ open ios/Runner.xcworkspace
 
 **`--dart-define=ADMOB_APP_ID=...` 不會自動改寫 iOS Info.plist。** Android 現有的 Gradle 注入設定不能直接套用到 iOS。
 
-### 4.2 iOS 獎勵廣告的目前設定
+### 4.2 本機測試及早期 Build 的 iOS 獎勵廣告設定
 
 `lib/main.dart` 已支援 Android / iOS；`lib/rewarded_ads.dart` 會選擇對應平台的測試 rewarded ID。iOS 使用：
 
@@ -119,9 +121,9 @@ AdMob App ID:       ca-app-pub-3940256099942544~1458002511
 Rewarded unit ID:   ca-app-pub-3940256099942544/1712485313
 ```
 
-Info.plist 已配置 iOS 測試 App ID 及 Google 官方 SKAdNetwork 清單。本次 TestFlight 使用測試廣告，不會產生收益。資料來源：[Google 測試廣告](https://developers.google.com/admob/flutter/test-ads)。
+原始 Info.plist 保留 iOS 測試 App ID 及 SKAdNetwork 清單，方便本機預設測試。Build 19 起，Actions 會在編譯前以 `tool/prepare_ios_admob.py` 寫入正式 App ID，並以 `config/admob.ios.production.json` 編譯 Dart 正式廣告設定。早期 TestFlight 的測試廣告沒有收益。資料來源：[Google 測試廣告](https://developers.google.com/admob/flutter/test-ads)。
 
-公開上架前，需建立自己的 iOS AdMob App / rewarded 單元，同步替換 Info.plist 與 Dart 正式設定，完成 UMP 與隱私申報後驗收。不可把 Android 的廣告 ID 填入 iOS。
+使用者已提供 iOS AdMob App / rewarded 單元；請完成 AdMob 帳戶端設定及商店隱私申報後驗收。不可把 Android 的廣告 ID 填入 iOS。
 
 ### 4.3 上架前的兒童與隱私設定
 
@@ -683,7 +685,7 @@ Apple 仍可能在處理。檢查 App Store Connect、通知信件，以及版�
 
 ### 沒有廣告，或廣告沒有收入
 
-目前 iOS 使用官方測試 ID；官方測試 ID 只用於測試，沒有收益。正式收入還取決於自己的 iOS AdMob 帳戶／App／單元設定、隱私流程、應用程式驗證與廣告填補。
+Build 19 起 Actions 使用正式 iOS 單元，本機預設仍使用官方測試 ID。請依 [iOS AdMob 接入](IOS_ADMOB.zh-TW.md) 檢查帳戶、App／單元、隱私訊息、應用程式驗證與廣告填補狀態；測試廣告沒有收益。
 
 ## 12. 完成標準
 
