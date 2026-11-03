@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "forest-base-v1",
+  "levels": [
+    {
+      "id": 1,
+      "title": {"zh-Hant": "森林初巡", "en": "First forest patrol", "yue-HK": "森林初巡"},
+      "lanes": 4,
+      "baseHealth": 100,
+      "waves": [
+        {"count": 6, "enemyHealth": 30, "enemySpeed": 26, "spawnIntervalSeconds": 0.875, "bossLast": false},
+        {"count": 7, "enemyHealth": 34, "enemySpeed": 27.3, "spawnIntervalSeconds": 0.875, "bossLast": false},
+        {"count": 8, "enemyHealth": 38, "enemySpeed": 28.6, "spawnIntervalSeconds": 0.875, "bossLast": true}
+      ]
+    }
+  ]
+}

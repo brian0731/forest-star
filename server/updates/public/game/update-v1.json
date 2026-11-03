@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "configRevision": 1,
+  "publishedAt": "2026-11-03T00:00:00Z",
+  "expiresAt": "2026-12-03T00:00:00Z",
+  "platforms": {
+    "ios": {
+      "applicationId": "com.foreststar.foreststar",
+      "latestVersion": "1.9.1",
+      "latestBuild": 19,
+      "minimumBuild": 1,
+      "promptEnabled": false,
+      "storeUrl": ""
+    },
+    "android": {
+      "applicationId": "com.foreststar.forest_star",
+      "latestVersion": "1.9.1",
+      "latestBuild": 18,
+      "minimumBuild": 1,
+      "promptEnabled": false,
+      "storeUrl": ""
+    }
+  },
+  "content": {
+    "enabled": false,
+    "version": "forest-base-v1",
+    "minimumClientBuild": {"ios": 20, "android": 20},
+    "catalogUrl": "https://star.singtu.hk/content/forest-base-v1/catalog.json",
+    "catalogBytes": 0,
+    "catalogSha256": ""
+  },
+  "notice": {
+    "id": "welcome-20261103",
+    "enabled": false,
+    "title": {
+      "zh-Hant": "森林公告",
+      "en": "Forest news",
+      "yue-HK": "森林公告"
+    },
+    "body": {
+      "zh-Hant": "歡迎回到森星小隊！",
+      "en": "Welcome back to Forest Star!",
+      "yue-HK": "歡迎返到森星小隊！"
+    }
+  }
+}
