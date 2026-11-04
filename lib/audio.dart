@@ -15,8 +15,8 @@ abstract class GameAudio {
 }
 
 class AppAudio implements GameAudio {
-  AppAudio({this.campMusicPath});
-  final String? campMusicPath;
+  AppAudio({this.campMusicPath, this.adventureMusicPath});
+  final String? campMusicPath, adventureMusicPath;
   final AudioPlayer _music = AudioPlayer();
   final AudioPlayer _effects = AudioPlayer();
   bool _enabled = true,
@@ -60,20 +60,30 @@ class AppAudio implements GameAudio {
           : 'audio/forest_loop.wav';
       final volume = scene == MusicScene.camp ? .44 : .32;
       try {
-        final remotePath = scene == MusicScene.camp ? campMusicPath : null;
+        final remotePath = scene == MusicScene.camp
+            ? campMusicPath
+            : adventureMusicPath;
         await _music.play(
           remotePath == null ? AssetSource(path) : DeviceFileSource(remotePath),
           volume: volume,
         );
       } catch (_) {
         if (!nativeMidi &&
-            !(scene == MusicScene.camp && campMusicPath != null)) {
+            (scene == MusicScene.camp ? campMusicPath : adventureMusicPath) ==
+                null) {
           rethrow;
         }
         // Some vendor devices have no usable MIDI synthesizer. The same score
         // is bundled as rendered audio, so camp music is still available.
         _campMidiUnavailable = true;
-        await _music.play(AssetSource('audio/forest_camp.wav'), volume: volume);
+        await _music.play(
+          AssetSource(
+            scene == MusicScene.camp
+                ? 'audio/forest_camp.wav'
+                : 'audio/forest_loop.wav',
+          ),
+          volume: volume,
+        );
       }
       _loadedScene = scene;
     } else {

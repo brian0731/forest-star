@@ -325,7 +325,7 @@ class _UpdateProgressPageState extends State<UpdateProgressPage>
                             const Padding(
                               padding: EdgeInsets.only(top: 10),
                               child: Text(
-                                '下載會使用網路數據；也可稍後再更新。',
+                                '建議使用 Wi-Fi，並預留至少 1.2 GB 空間。也可稍後更新。',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,

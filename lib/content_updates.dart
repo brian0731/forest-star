@@ -10,12 +10,15 @@ import 'level_data.dart';
 
 const updateHost = 'star.singtu.hk';
 final updateManifestUri = Uri.https(updateHost, '/game/update-v1.json');
+const maxContentFileBytes = 128 * 1024 * 1024;
+const maxContentBundleBytes = 512 * 1024 * 1024;
 const imageContentKeys = {
   'camp',
   'board',
   'room',
   'battle',
   'field',
+  'field-level2',
   'location0',
   'location1',
   'location2',
@@ -184,7 +187,7 @@ class ContentFile {
     : key = data['key'] as String,
       kind = data['kind'] as String,
       path = data['path'] as String,
-      bytes = boundedInt(data['bytes'], 1, 20 * 1024 * 1024),
+      bytes = boundedInt(data['bytes'], 1, maxContentFileBytes),
       hash = _hash(data['sha256']),
       uri = _trustedUri(data['url'], '/content/$version/${data['path']}') {
     if (!RegExp(
@@ -196,9 +199,11 @@ class ContentFile {
     final valid = switch (kind) {
       'image' =>
         imageContentKeys.contains(key) &&
+            bytes <= 20 * 1024 * 1024 &&
             {'png', 'webp', 'jpg'}.contains(extension),
       'audio' =>
-        key == 'camp-music' && {'wav', 'mp3', 'm4a'}.contains(extension),
+        {'camp-music', 'adventure-music'}.contains(key) &&
+            {'wav', 'mp3', 'm4a'}.contains(extension),
       'levels' => key == 'levels' && extension == 'json' && bytes <= 256 * 1024,
       _ => false,
     };
@@ -228,7 +233,7 @@ class ContentCatalog {
         ContentFile(Map<String, dynamic>.from(file as Map), version),
     ];
     final total = files.fold<int>(0, (sum, file) => sum + file.bytes);
-    if (total != boundedInt(data['totalBytes'], 1, 50 * 1024 * 1024) ||
+    if (total != boundedInt(data['totalBytes'], 1, maxContentBundleBytes) ||
         files.map((f) => f.key).toSet().length != files.length ||
         files.map((f) => f.path).toSet().length != files.length) {
       throw const FormatException('Invalid catalog totals or duplicate files');
@@ -275,6 +280,7 @@ class ContentUpdates extends ChangeNotifier {
   ContentBundle? active;
   double get progress =>
       totalBytes == 0 ? 0 : (receivedBytes / totalBytes).clamp(0, 1);
+  String? currentFileKey;
 
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -332,6 +338,52 @@ class ContentUpdates extends ChangeNotifier {
     }
   }
 
+  Future<void> _downloadFile(ContentFile item, File file, int epoch) async {
+    _check(epoch);
+    final response = await _client!
+        .send(http.Request('GET', item.uri)..followRedirects = false)
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode != 200 ||
+        response.contentLength != null &&
+            response.contentLength != item.bytes) {
+      throw const FormatException('Invalid content response');
+    }
+    final sink = file.openWrite();
+    var count = 0;
+    final hash = _DigestSink();
+    final hasher = sha256.startChunkedConversion(hash);
+    var lastNotification = DateTime.fromMillisecondsSinceEpoch(0);
+    try {
+      await for (final chunk in response.stream.timeout(
+        const Duration(seconds: 20),
+      )) {
+        _check(epoch);
+        count += chunk.length;
+        if (count > item.bytes) {
+          throw const FormatException('Download exceeds size');
+        }
+        sink.add(chunk);
+        // Apply backpressure: never queue an entire MP3 in the IOSink buffer.
+        await sink.flush();
+        hasher.add(chunk);
+        receivedBytes += chunk.length;
+        final now = DateTime.now();
+        if (count == item.bytes ||
+            now.difference(lastNotification).inMilliseconds >= 100) {
+          lastNotification = now;
+          _notify();
+        }
+      }
+      hasher.close();
+      _check(epoch);
+      if (count != item.bytes || hash.value.toString() != item.hash) {
+        throw const FormatException('Content checksum mismatch');
+      }
+    } finally {
+      await sink.close();
+    }
+  }
+
   String _folder(ContentOffer offer) =>
       '${offer.version}-${offer.catalogHash.substring(0, 16)}';
 
@@ -372,12 +424,25 @@ class ContentUpdates extends ChangeNotifier {
       if (await file.length() != item.bytes) {
         throw const FormatException('Cached file size mismatch');
       }
-      final bytes = await file.readAsBytes();
-      _verify(bytes, item.bytes, item.hash);
+      final hash = await sha256
+          .bind(
+            file.openRead().map((chunk) {
+              _check(epoch);
+              return chunk;
+            }),
+          )
+          .first;
+      if (hash.toString() != item.hash) {
+        throw const FormatException('Cached checksum mismatch');
+      }
       if (item.kind == 'levels') {
-        levels = LevelBook.parse(decodeObject(bytes), offer.version);
+        levels = LevelBook.parse(
+          decodeObject(await file.readAsBytes()),
+          offer.version,
+        );
       }
       if (item.kind == 'image') {
+        final bytes = await file.readAsBytes();
         final buffer = await ui.ImmutableBuffer.fromUint8List(bytes);
         ui.ImageDescriptor? descriptor;
         ui.Codec? codec;
@@ -396,6 +461,13 @@ class ContentUpdates extends ChangeNotifier {
         }
       }
       if (item.kind == 'audio') {
+        final handle = await file.open();
+        late final List<int> bytes;
+        try {
+          bytes = await handle.read(12);
+        } finally {
+          await handle.close();
+        }
         final wave =
             bytes.length >= 12 &&
             ascii.decode(bytes.sublist(0, 4), allowInvalid: true) == 'RIFF' &&
@@ -518,19 +590,18 @@ class ContentUpdates extends ChangeNotifier {
       await staging.create(recursive: true);
       await File('${staging.path}/catalog.json').writeAsBytes(raw, flush: true);
       for (final file in catalog.files) {
-        final data = await _fetch(
-          file.uri,
-          file.bytes,
+        currentFileKey = file.key;
+        message = switch (file.kind) {
+          'audio' => '正在下載森林音樂…',
+          'levels' => '正在下載關卡資料…',
+          _ => '正在下載森林圖片…',
+        };
+        _notify();
+        await _downloadFile(
+          file,
+          File('${staging.path}/${file.path}'),
           epoch,
-          onChunk: (count) {
-            receivedBytes += count;
-            _notify();
-          },
-        ).timeout(const Duration(seconds: 45));
-        _verify(data, file.bytes, file.hash);
-        await File(
-          '${staging.path}/${file.path}',
-        ).writeAsBytes(data, flush: true);
+        ).timeout(const Duration(minutes: 30));
       }
       _check(epoch);
       phase = UpdatePhase.verifying;
@@ -615,6 +686,14 @@ class ContentUpdates extends ChangeNotifier {
     cancel();
     super.dispose();
   }
+}
+
+class _DigestSink implements Sink<Digest> {
+  Digest? value;
+  @override
+  void add(Digest data) => value = data;
+  @override
+  void close() {}
 }
 
 class _Cancelled implements Exception {

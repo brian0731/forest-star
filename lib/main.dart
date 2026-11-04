@@ -47,7 +47,10 @@ Future<void> main() async {
         prefs: prefs,
         initialState: state,
         ads: ads,
-        audio: AppAudio(campMusicPath: content?.filePath('camp-music')),
+        audio: AppAudio(
+          campMusicPath: content?.filePath('camp-music'),
+          adventureMusicPath: content?.filePath('adventure-music'),
+        ),
       ),
     ),
   );

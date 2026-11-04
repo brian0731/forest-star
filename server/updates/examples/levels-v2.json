@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "forest-level2-v1",
+  "levels": [
+    {
+      "id": 1,
+      "title": {"zh-Hant": "森林初巡", "en": "First forest patrol", "yue-HK": "森林初巡"},
+      "lanes": 4,
+      "baseHealth": 100,
+      "waves": [
+        {"count": 6, "enemyHealth": 30, "enemySpeed": 26, "spawnIntervalSeconds": 0.875, "bossLast": false},
+        {"count": 7, "enemyHealth": 34, "enemySpeed": 27.3, "spawnIntervalSeconds": 0.875, "bossLast": false},
+        {"count": 8, "enemyHealth": 38, "enemySpeed": 28.6, "spawnIntervalSeconds": 0.875, "bossLast": true}
+      ]
+    },
+    {
+      "id": 2,
+      "title": {"zh-Hant": "螢光秘林", "en": "Firefly woodland", "yue-HK": "螢光秘林"},
+      "lanes": 4,
+      "baseHealth": 125,
+      "waves": [
+        {"count": 7, "enemyHealth": 36, "enemySpeed": 27, "spawnIntervalSeconds": 0.9, "bossLast": false},
+        {"count": 9, "enemyHealth": 42, "enemySpeed": 28, "spawnIntervalSeconds": 0.85, "bossLast": false},
+        {"count": 10, "enemyHealth": 48, "enemySpeed": 29, "spawnIntervalSeconds": 0.8, "bossLast": true}
+      ]
+    }
+  ]
+}

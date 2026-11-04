@@ -57,6 +57,7 @@ app.*.map.json
 /output/preview/
 /output/audio/
 /output/server/
+/output/imagegen/level2-v1/
 **/__pycache__/
 *.pfx
 *.key

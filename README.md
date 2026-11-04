@@ -1,6 +1,8 @@
 # 森星小隊 · Flutter / Flame
 
-1.10.0（Build 20）加入 `https://star.singtu.hk` 啟動更新頁：實際下載百分比／大小、圖片與音樂及固定格式關卡、SHA-256 校驗、保留上一版本、離線進入遊戲。線上素材開關仍需由 VPS 管理者啟用；部署及操作見 [SERVER 設定教學](docs/GAME_UPDATE_SERVER_SETUP.zh-TW.md)。
+1.10.1（Build 21）支援超過 200 MB 的伺服器內容包：圖片、兩首原創 MP3 及第 2 關「螢光秘林」。下載／校驗改為串流，整包上限 512 MiB，音樂單檔 128 MiB。220.49 MiB 測試包、媒體來源、VPS 上傳與驗收見 [第 2 關大包測試教學](docs/LEVEL2_200MB_SERVER_TEST.zh-TW.md)。媒體不放進 APK／IPA 或 Git。
+
+1.10.0（Build 20）加入 `https://star.singtu.hk` 啟動更新頁：實際下載百分比／大小、SHA-256 校驗、保留上一版本、離線進入遊戲。伺服器部署及操作見 [SERVER 設定教學](docs/GAME_UPDATE_SERVER_SETUP.zh-TW.md)。Build 20 不支援上述大包。
 
 遊戲教學：開始畫面的「新手教學」，或遊戲左上角的學士帽圖示，可重播十步互動教學。使用 `tutorial_coach_mark` 聚焦實際遊戲位置，在獨立練習世界示範彈珠、六籃育成、升級、進化、四路守衛及免費補給，不寫入正式存檔。詳見 [教學及裝置朗讀設定](docs/GAME_TUTORIAL.zh-TW.md)。
 

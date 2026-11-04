@@ -30,6 +30,8 @@ class StoryArt {
     final paths = <String, String>{
       'board': 'assets/storybook/pinball-board-v2.webp',
       'field': 'assets/storybook/guard-horizontal-v1.webp',
+      if (content?.filePath('field-level2') != null)
+        'field-level2': 'assets/storybook/guard-horizontal-v1.webp',
       'camp': 'assets/storybook/camp.webp',
       'room': 'assets/storybook/companions.webp',
       'battle': 'assets/storybook/camp.webp',
@@ -51,7 +53,9 @@ class StoryArt {
     try {
       await Future.wait(
         paths.entries.map((entry) async {
-          final path = content?.filePath(entry.key);
+          final path =
+              content?.filePath(entry.key) ??
+              (entry.key == 'battle' ? content?.filePath('camp') : null);
           final bytes = path == null
               ? (await rootBundle.load(entry.value)).buffer.asUint8List()
               : await File(path).readAsBytes();
@@ -918,9 +922,21 @@ class GamePainter extends CustomPainter {
   }
 
   void battlePage() {
-    section('苔光林地 · 四路防線', '四路夥伴，橫向出擊', '草 → 水 → 火 → 草');
+    final stage = combat.active ? combat.stage : state.stage;
+    final level2Art =
+        stage == 2 && StoryArt.instance.images.containsKey('field-level2');
+    section(
+      level2Art ? '螢光秘林 · 四路防線' : '苔光林地 · 四路防線',
+      '四路夥伴，橫向出擊',
+      '草 → 水 → 火 → 草',
+    );
     panel(24, 220, 432, 449, radius: 22);
-    image('field', BattleLayout.field, radius: 8, fit: BoxFit.contain);
+    image(
+      level2Art ? 'field-level2' : 'field',
+      BattleLayout.field,
+      radius: 8,
+      fit: BoxFit.contain,
+    );
     box(39, 232, 402, 31, const Color(0xcefff6df), 10);
     text(
       51,
@@ -1108,7 +1124,9 @@ class GamePainter extends CustomPainter {
       140,
       420,
       19,
-      '陽光正好，朋友都在。',
+      StoryArt.instance.images.containsKey('field-level2')
+          ? '螢光亮起，朋友都在。'
+          : '陽光正好，朋友都在。',
       12,
       Colors.white,
       align: TextAlign.center,

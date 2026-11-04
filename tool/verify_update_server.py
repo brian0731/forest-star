@@ -23,20 +23,44 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--capture', type=Path, help='Save verified responses for local integration tests')
     parser.add_argument('--enable-manifest', type=Path, help='Write an activation manifest locally; does not deploy')
+    parser.add_argument('--local-catalog', type=Path, help='Verify uploaded media against a local catalog before activating its manifest')
     args = parser.parse_args()
+    if args.local_catalog and (args.capture or args.enable_manifest):
+        parser.error('--local-catalog cannot be combined with capture/enable-manifest')
     opener = build_opener(NoRedirect())
 
-    def fetch(path, limit):
-        with opener.open(Request(f'https://{HOST}{path}', headers={'Cache-Control': 'no-cache'}), timeout=20) as response:
-            if response.status != 200:
-                raise ValueError(f'HTTP {response.status}: {path}')
-            raw = response.read(limit + 1)
-        if len(raw) > limit:
-            raise ValueError(f'Oversized response: {path}')
-        return raw
+    def fetch(path, limit, *, target=None, expected_size=None, expected_hash=None, media=False):
+        digest = hashlib.sha256()
+        count, pieces = 0, []
+        if target:
+            target.parent.mkdir(parents=True, exist_ok=True)
+        sink = target.open('wb') if target else None
+        try:
+            with opener.open(Request(f'https://{HOST}{path}', headers={'Cache-Control': 'no-cache'}), timeout=30) as response:
+                if response.status != 200: raise ValueError(f'HTTP {response.status}: {path}')
+                while chunk := response.read(256 * 1024):
+                    count += len(chunk)
+                    if count > limit: raise ValueError(f'Oversized response: {path}')
+                    digest.update(chunk)
+                    if sink: sink.write(chunk)
+                    if not media: pieces.append(chunk)
+            if expected_size is not None and count != expected_size: raise ValueError(f'Size mismatch: {path}')
+            if expected_hash is not None and digest.hexdigest() != expected_hash: raise ValueError(f'SHA-256 mismatch: {path}')
+            return b''.join(pieces)
+        finally:
+            if sink: sink.close()
 
-    manifest = json.loads(fetch('/game/update-v1.json', 65536).decode('utf-8'))
-    content = manifest['content']
+    if args.local_catalog:
+        catalog_raw = args.local_catalog.read_bytes()
+        if len(catalog_raw) > 262144: raise ValueError('Oversized local catalog')
+        version = json.loads(catalog_raw.decode('utf-8'))['contentVersion']
+        manifest = None
+        content = {'version':version,'enabled':False,
+                   'catalogUrl':f'https://{HOST}/content/{version}/catalog.json',
+                   'catalogBytes':len(catalog_raw),'catalogSha256':hashlib.sha256(catalog_raw).hexdigest()}
+    else:
+        manifest = json.loads(fetch('/game/update-v1.json', 65536).decode('utf-8'))
+        content = manifest['content']
     version = content['version']
     if not re.fullmatch(r'[a-z0-9][a-z0-9-]{0,63}', version):
         raise ValueError('Invalid content version')
@@ -50,7 +74,10 @@ def main():
     catalog = json.loads(catalog_raw.decode('utf-8'))
     if catalog['schemaVersion'] != 1 or catalog['contentVersion'] != version:
         raise ValueError('Unexpected catalog schema/version')
-    captured = {path: catalog_raw}
+    if args.capture:
+        target = args.capture / path.lstrip('/')
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(catalog_raw)
     total = 0
     for item in catalog['files']:
         if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9-]*\.(png|webp|jpg|wav|mp3|m4a|json)', item['path']):
@@ -58,21 +85,18 @@ def main():
         path = f"/content/{version}/{item['path']}"
         if urlsplit(item['url']).geturl() != f'https://{HOST}{path}':
             raise ValueError('Unexpected file URL')
-        raw = fetch(path, min(item['bytes'], 20 * 1024 * 1024))
-        if len(raw) != item['bytes'] or hashlib.sha256(raw).hexdigest() != item['sha256']:
-            raise ValueError(f"Size or SHA-256 mismatch: {item['path']}")
-        captured[path] = raw
-        total += len(raw)
-        print(f"Verified {item['key']}: {len(raw)} bytes")
-    if total != catalog['totalBytes'] or total > 50 * 1024 * 1024:
+        fetch(path, min(item['bytes'], 128 * 1024 * 1024), media=True,
+              target=args.capture / path.lstrip('/') if args.capture else None,
+              expected_size=item['bytes'], expected_hash=item['sha256'])
+        total += item['bytes']
+        print(f"Verified {item['key']}: {item['bytes']} bytes")
+    if total != catalog['totalBytes'] or total > 512 * 1024 * 1024:
         raise ValueError('Catalog total mismatch')
-    print('Live content enabled:', content['enabled'], '| verified bytes:', total)
+    print('Catalog verified before activation' if args.local_catalog else f"Live content enabled: {content['enabled']}", '| verified bytes:', total)
     if args.capture:
-        captured['/game/update-v1.json'] = (json.dumps(manifest, ensure_ascii=False) + '\n').encode('utf-8')
-        for path, raw in captured.items():
-            target = args.capture / path.lstrip('/')
-            target.parent.mkdir(parents=True, exist_ok=True)
-            target.write_bytes(raw)
+        target = args.capture / 'game/update-v1.json'
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(manifest, ensure_ascii=False)+'\n', encoding='utf-8')
         print('Captured verified responses:', args.capture)
     if args.enable_manifest:
         now = datetime.now(timezone.utc)
