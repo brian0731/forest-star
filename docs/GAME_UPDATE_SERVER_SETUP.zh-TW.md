@@ -1,14 +1,38 @@
 # 森星小隊：啟動檢查與圖片／音樂／關卡更新伺服器
 
-更新：2026-11-03。指定網址：**https://star.singtu.hk**。主機：**Linux VPS + Nginx**。
+更新：2026-11-04。指定網址：**https://star.singtu.hk**。主機：**Linux VPS + Nginx**。
 
-這份教學可建立供 App 讀取的 HTTPS 更新網站，提供版本提示、公告，以及圖片、音樂、關卡 JSON。此階段交付伺服器範本、實際素材測試包及操作說明；**現有 iOS Build 19／Android Build 18 尚未實作啟動檢查及遠端素材載入**。網站上線後，仍須將下述客戶端流程寫進 Flutter，再透過商店發布一次新版。只上傳 JSON 不會讓已安裝的舊版自動獲得新功能。
+**Flutter 1.10.0（Build 20）已加入啟動更新頁、下載百分比／大小、校驗、離線回退及遠端圖片／營地音樂／固定格式關卡載入。** iOS Build 19／Android Build 18 等舊版仍須先安裝新版，才有下載能力。每次啟動進入遊戲前檢查；不在遊玩途中更換素材。
 
-本次從開發電腦檢查，`star.singtu.hk` 尚無法解析 DNS，因此未完成線上連通驗證，也未登入或修改你的 VPS。
+2026-11-04 已從開發電腦成功讀取 HTTPS 設定、目錄及四個素材，核對共 6,619,037 bytes 的大小與 SHA-256。**線上 `content.enabled` 目前仍為 `false`**，所以新版會顯示檢查完成，不會下載。未登入或修改你的 VPS；啟用方法見下節。
+
+## 0. 網站已上線：現在啟用 Build 20 測試包
+
+本機已準備 `C:\Users\user\Desktop\forest-star\Builds\Server\update-v1-enable-build20.json`，保留線上素材版本與校驗碼，將 `content.enabled` 設為 `true`、提高 `configRevision` 並更新有效日期；兩個平台最低客戶端仍為 Build 20。不會開啟商店更新提示。
+
+先在手機安裝新版，再將此檔上傳到 VPS 的 `/tmp/update-v1-enable-build20.json`。SSH 登入後執行（網站實際 root 若不同，請替換）：
+
+```bash
+python3 -m json.tool /tmp/update-v1-enable-build20.json > /dev/null
+sudo install -m 644 /tmp/update-v1-enable-build20.json /var/www/forest-star-updates/game/update-v1.json.next
+sudo mv /var/www/forest-star-updates/game/update-v1.json.next /var/www/forest-star-updates/game/update-v1.json
+curl -fsS https://star.singtu.hk/game/update-v1.json
+```
+
+重新開啟 App，點「下載森林更新」，觀看約 6.3 MiB 的下載進度；成功後點「進入遊戲」。此初始包沿用現有圖片和音樂，因此畫風相同，更新狀態會顯示 `forest-base-v1`。下次啟動會驗證快取並略過重複下載；飛航模式仍可使用它。測試完成後再公開推送新版。更新後的隱私政策 HTML 亦須同步到公開政策網址，並確認 VPS 日誌設定。
+
+若要重新核對線上素材及產生新的本機啟用檔，在 Flutter 專案根目錄執行：
+
+```powershell
+python tool/verify_update_server.py --enable-manifest ../../Builds/Server/update-v1-enable-build20.json
+python tool/prepare_update_server.py --manifest ../../Builds/Server/update-v1-enable-build20.json
+```
+
+這些指令只讀網站並寫本機檔案，**不會部署到 VPS**。設定約 30 天後到期，維運時須刷新日期；過期後 App 繼續使用已下載或內附內容。
 
 ## 1. 更新範圍
 
-App 啟動先顯示開始畫面，背景檢查 `https://star.singtu.hk/game/update-v1.json`。無更新或斷線時，使用已驗證的本機資源，照常開始遊戲；有素材更新時顯示內容版本、下載大小及下載／稍後選項，下載驗證完成後，下次進入營地或下次啟動才切換。
+App 啟動先顯示森林更新頁，檢查 `https://star.singtu.hk/game/update-v1.json`。無更新或斷線時，可使用已驗證的本機資源進入遊戲；有更新時顯示內容版本、下載大小及下載／稍後選項，整包驗證成功後，按「進入遊戲」即使用新版。檢查、下載或校驗期間亦可略過，繼續使用原有內容。
 
 可下載既有畫面使用的背景圖片、角色圖片、音樂及符合固定格式的關卡資料。關卡資料只能描述已隨 App 發布的敵人種類、四條路、數值及波次；不能包含 Dart、JavaScript、Lua、原生函式庫或可執行腳本。新增技能、物理算法、程式功能、SDK 或資料解析格式，需重新建置 App 並經商店更新。Apple 2.5.2 對下載會新增或變更功能的程式碼有限制，資料更新亦須符合已審核的功能及內容範圍。[Apple 審查規則](https://developer.apple.com/app-store/review/guidelines/#software-requirements)
 
@@ -44,7 +68,7 @@ content/forest-base-v1/forest-camp.wav
 content/forest-base-v1/levels.json
 ```
 
-測試包從本專案複製現有營地背景、彈珠台背景及森林背景音樂；`levels.json` 為固定格式示範，**不是已接上戰鬥引擎的正式關卡表**。打包工具自動計算每個檔案的位元組大小、SHA-256，以及素材目錄本身的 SHA-256。不要手填檔案雜湊。
+測試包從本專案複製現有營地背景、彈珠台背景及森林背景音樂；`levels.json` 已接上 Build 20 戰鬥引擎，示範覆寫第 1 關的三波數據，其餘九關沿用內附公式。打包工具自動計算每個檔案的位元組大小、SHA-256，以及素材目錄本身的 SHA-256。不要手填檔案雜湊。
 
 ## 3. DNS 與 VPS 前置設定
 
@@ -149,7 +173,7 @@ Get-FileHash "$env:TEMP/forest-star-server-camp.webp" -Algorithm SHA256
 
 `storeUrl` 只填自己的已上線商店頁面：iOS 使用 `https://apps.apple.com/.../id實際數字ID`；Android 使用 `https://play.google.com/store/apps/details?id=com.foreststar.forest_star`，也須先確認實際可下載。不可把 Bundle ID 當作 Apple 商店數字 ID。商店確認已對目標地區上線後，才開啟 `promptEnabled` 並更新 latestBuild。第一階段建議提供可略過的更新提示；`minimumBuild` 先保持 `1`，未實作且驗證更新流程前不使用強制更新。
 
-`notice` 是純文字公告，支援繁中、英文、粵語；不解析 HTML 或腳本。`notice.id` 更新後，可讓新版 App 每個公告只主動顯示一次。
+`notice` 保留繁中、英文、粵語欄位；目前更新頁顯示 `zh-Hant` 純文字，不解析 HTML 或腳本。點主按鈕進入遊戲後記錄 `notice.id`，避免重複顯示同一公告。
 
 `content` 指向素材目錄，`catalogBytes` 與 `catalogSha256` 由打包工具產生。`minimumClientBuild` 範例為 `20`，是規劃中的下載器版本門檻，需換成實際完成並發布的客戶端建置。**範例 `content.enabled` 保持 `false`，等 Flutter 下載器實作與驗收通過後才開啟。**
 
@@ -185,28 +209,33 @@ sudo mv /var/www/forest-star-updates/game/update-v1.json.next /var/www/forest-st
 
 同磁碟上的 rename 可避免 App 讀到半個 JSON。只改靜態檔不需 reload Nginx。回退時，以更高的 `configRevision` 發布指回舊素材路徑的設定，更新有效日期；舊版素材檔案必須仍存在。若修正素材內容，一律建立新 content version。
 
-圖片保留現有畫風、長寬比例及透明背景；限制解碼像素，例如最高 4096 × 4096，避免小壓縮檔解碼後佔用過多記憶體。音樂可先沿用 WAV；正式版可測試 AAC／MP3 以減少下載量，iOS／Android 均需實機播放驗證。大檔案才考慮 Range 斷點續傳；入門版失敗後重新下載單一檔案。
+圖片保留現有畫風、長寬比例及透明背景；限制最高 4096 × 4096。音樂可用 WAV／MP3／M4A（需實機驗證），目前只有 `camp-music` 對應營地背景音。第一版失敗後重新下載整包，未實作斷點續傳。
 
 關卡範例的 `lanes` 固定為 4；每關有既定的 `waves`，描述敵人數量、血量、速度、出生間隔及最後一隻是否為 Boss。客戶端須限制數值範圍，例如每波 1–100 隻、血量 1–100000、速度 1–300、間隔 0.2–10 秒；只允許既有敵人類型。不可直接把遠端數值無驗證地用於迴圈、陣列大小或獎勵發放。
 
-## 9. Flutter 接入工作：下一階段需要完成
+## 9. Flutter Build 20 已實作的流程
 
-這一節是開發規格，**不是目前已生效的功能**。建議新增 `UpdateService`、`ContentRepository` 及開始畫面的下載進度面板。
+`lib/update_page.dart` 在遊戲開始畫面之前顯示森林更新頁。`package_info_plus` 讀實際 build、`path_provider` 取得 App Support、`http` 下載、`crypto` 校驗、`url_launcher` 開啟有效商店連結。AdMob／UMP 在進入遊戲後才開始處理，避免與更新畫面同時出現。
 
-1. 啟動時先讀內附資源及上次有效的 active content，不把網路放在 `runApp()` 前無限等待。開始畫面顯示「檢查更新／下載進度／稍後」；JSON 請求總逾時約 5 秒，失敗可略過。
-2. 讀取平台實際版本：使用 `package_info_plus`；HTTPS 請求使用直接宣告的 `http` 或 `dart:io`，檔案目錄使用 `path_provider`，SHA-256 使用 `crypto`。目前 lockfile 中的間接依賴不能代替在 pubspec 宣告直接使用的插件。
-3. 檢查 JSON schema、平台 applicationId、有效日期、大小上限、客戶端版本門檻及欄位型別。只讀 `star.singtu.hk` 的 HTTPS 設定／素材，重新導向也要核對來源；商店連結另外限制為 Apple／Google 官方主機及本 App。不要為每部裝置在 URL 加識別碼。
-4. 限制更新 JSON 64 KiB、素材目錄 256 KiB、單檔例如 20 MiB、整包例如 50 MiB、同時下載最多 2 個。下載前顯示總量；行動網路可讓玩家稍後，沒有空間則繼續使用原包。
-5. 目錄先按原始位元組驗證大小與 SHA-256，再解析；每個素材也驗證大小與 SHA-256。Hash 可偵測檔案不一致，不能取代 HTTPS，也無法在網站被控制時證明發布者身分。需要更高保證時，再對目錄加入數位簽章及 App 內固定公鑰。
-6. 下載至 App Support 的 `content/staging/版本/`，拒絕 `..`、絕對路徑、重複 logical key、未知副檔名及超額串流。全部驗證成功後，以完整版本目錄及暫存指標檔 rename 切換 active；保留上一個有效版本。第一版使用逐檔下載，不接收任意 ZIP 解壓。
-7. 不在射球、戰鬥或教學中途熱換圖片。等返回開始畫面／下次啟動重建場景後載入新版，確保圖像、碰撞、去背資料與音樂屬於同一套版本。
-8. 改造 `StoryArt`：目前只經 `rootBundle.load()` 且 `_loading` 僅執行一次；新增由 ContentRepository 取得位元組的入口並保留 rootBundle fallback。CampLocation 在建立時會計算圖片 alpha 命中範圍，更換角色／建築圖後須重建，不可只替換圖片 Map。
-9. 改造 `AppAudio`：下載音樂用 `DeviceFileSource`，內附音樂保留 `AssetSource`。先停止／釋放舊播放器，再在場景切換後使用新檔。教學女聲仍用裝置 TTS，素材更新不改變朗讀引擎。
-10. 改造 `Combat`／`GameState`：目前波次公式在 `lib/game.dart` 寫死，關卡進度亦限制 1–10。新增固定 schema 的 LevelDefinition 驗證及已發布關卡查詢，保留原本內附十關及存檔相容性；增加超過十關時，須在首個支援版本同步處理進度上限與舊存檔，不是只上傳 JSON。
-11. 避免公告、版本提示與 AdMob UMP 同時彈出：在現有 `_dialogOpen` 及 `setExternalOverlay(source: ...)` 流程序列處理；廣告獎勵仍只由 earned-reward 回呼發放，不用 JSON 指令直接加彈珠。
-12. 首次接入需上傳新 App build；審查備註說明下載的是媒體與固定格式關卡資料，提供可用測試端點。隱私政策補上自有更新網站／VPS 主機商處理 IP 及連線資料的用途、保存做法；尚未確定主機商前不聲稱完全沒有伺服器紀錄。
+`lib/content_updates.dart` 只接受 `star.singtu.hk` 的 HTTPS，拒絕重新導向、外站、路徑穿越、未知 logical key、重複檔名／key、錯誤型別及過期設定。上限為 manifest 64 KiB、catalog 256 KiB、單檔 20 MiB、整包 50 MiB；逐檔下載，檔案整體逾時 45 秒、串流閒置逾時 10 秒，JSON 整體逾時 8 秒。可隨時略過，不強制連線。
 
-建議驗收：飛航模式啟動、5xx／404／錯誤 JSON、過期設定、錯誤 Hash、下載中斷／關閉 App、空間不足、舊版 schema、素材回退、存檔保留、四路關卡數值限制、iPhone／Android 圖片及音樂播放，以及廣告／教學彈窗互斥。
+下載在 App Support 的 `forest-content-v1/staging-*`，整包大小與 SHA-256、圖片實際解碼／像素、音樂檔頭及關卡格式均通過才切換 `active.json`。保留 active 與 previous 兩套，安裝成功後清理其他版本；失敗不覆寫原 active。啟動會重新驗證快取，損壞時嘗試 previous，再使用內附內容。未做斷點續傳；重試重新下載整包。
+
+`StoryArt.load(content: ...)` 在建立 Flame 場景前套用圖片，未列入更新的圖沿用內附素材；後續場景呼叫 load 不會意外改回舊圖。營地建築的 alpha 命中區隨新場景重新建立。圖片更新仍須符合既有素材的比例、透明背景及內容用途。
+
+可用圖片 key：`camp`、`board`、`room`、`battle`、`field`、`location0`–`location2`、`friend0`–`friend5`、`marble0`–`marble3`、`nav0`–`nav3`、`frame-paper`、`frame-green`、`frame-cream`、`frame-selected`。副檔名 PNG／WebP／JPG，最大 4096 × 4096。
+
+`AppAudio` 的 `camp-music` 使用下載的 WAV／MP3／M4A；播放失敗回到內附營地音樂。其他場景音樂、音效及裝置女聲教學不變。`LevelBook` 接受 1–10 關、每關四條路及三波，`Combat.begin()` 固定本場關卡設定，未提供的關卡沿用內附公式。資料不能新增技能、程式或發放任意廣告獎勵。
+
+新增測試覆蓋關閉下載／舊客戶端、完整安裝與離線還原、錯誤 SHA-256、重試、中途取消、損壞快取回退及修復、重新導向／外站／過期設定／非法檔案、圖片解碼、關卡範圍與戰鬥接入、小螢幕下載按鈕及實際百分比。也可擷取線上完整包，在同一下載器中測試解碼與套用：
+
+```powershell
+python tool/verify_update_server.py --capture output/review/live-update-site
+$env:FOREST_LIVE_SITE = (Resolve-Path output/review/live-update-site).Path
+flutter test test/content_updates_test.dart
+```
+
+實機仍需驗證：Android／iPhone 首次下載、飛航模式、下載途中離開、圖片觸控位置、營地音樂播放、原存檔保留及 AdMob／教學流程。本機測試與 CI 不等於實機驗收。
 
 ## 10. 若日後改用 Cloudflare Pages
 
@@ -216,11 +245,10 @@ Pages 以 `_headers` 提供此包的快取規則，Nginx 則讀 `nginx.example.c
 
 參考：[Nginx 靜態檔案](https://nginx.org/en/docs/beginners_guide.html#static)、[Pages Direct Upload](https://developers.cloudflare.com/pages/get-started/direct-upload/)、[Pages Header 設定](https://developers.cloudflare.com/pages/configuration/headers/)、[Pages 自訂網域](https://developers.cloudflare.com/pages/configuration/custom-domains/)、[Pages 限制](https://developers.cloudflare.com/pages/platform/limits/)。
 
-## 11. 你現在先完成的工作
+## 11. 你現在需完成的工作
 
-1. 在 DNS 後台把 `star` 的 A 記錄指向 VPS。
-2. 用 SSH 安裝／設定 Nginx，上傳本次 ZIP，開通 80／443 及有效 HTTPS 憑證。
-3. 確認 `https://star.singtu.hk/health.json` 與 `/game/update-v1.json` 可從手機網路直接開啟。
-4. 保持 `content.enabled: false`，完成 Flutter 客戶端接入及實機測試後才啟用。
+1. 安裝 Build 20，在第 0 節啟用設定後測試下載、離線啟動、圖片及音樂播放。
+2. 將更新後的隱私政策 HTML 同步到公開網址，確認 VPS 主機商、日誌及保存設定，按實際資料處理更新商店隱私申報。
+3. 後續素材先上傳到新版本目錄，驗證可讀及雜湊後才原子替換 `game/update-v1.json`；持續刷新有效日期。
 
-伺服器唯讀端點不需要把管理密碼提供給玩家。沒有玩家帳戶、排行榜或雲端存檔需求時，第一階段不需要資料庫、登入服務或公開管理 API。
+伺服器唯讀端點不需要把管理密碼提供給玩家。沒有玩家帳戶、排行榜或雲端存檔需求時，不需要資料庫、登入服務或公開管理 API。

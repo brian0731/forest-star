@@ -1,6 +1,6 @@
 # 森星小隊 · Flutter / Flame
 
-遊戲更新伺服器：`https://star.singtu.hk` 的 Linux VPS／Nginx 部署、版本檢查及圖片／音樂／關卡資料下載規格，見 [SERVER 設定教學](docs/GAME_UPDATE_SERVER_SETUP.zh-TW.md)。附可打包的網站及素材 SHA-256 清單；現有 App 尚未接入下載器。
+1.10.0（Build 20）加入 `https://star.singtu.hk` 啟動更新頁：實際下載百分比／大小、圖片與音樂及固定格式關卡、SHA-256 校驗、保留上一版本、離線進入遊戲。線上素材開關仍需由 VPS 管理者啟用；部署及操作見 [SERVER 設定教學](docs/GAME_UPDATE_SERVER_SETUP.zh-TW.md)。
 
 遊戲教學：開始畫面的「新手教學」，或遊戲左上角的學士帽圖示，可重播十步互動教學。使用 `tutorial_coach_mark` 聚焦實際遊戲位置，在獨立練習世界示範彈珠、六籃育成、升級、進化、四路守衛及免費補給，不寫入正式存檔。詳見 [教學及裝置朗讀設定](docs/GAME_TUTORIAL.zh-TW.md)。
 

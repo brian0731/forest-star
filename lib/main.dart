@@ -14,13 +14,13 @@ import 'forest_flame_game.dart';
 import 'rewarded_ads.dart';
 import 'privacy_page.dart';
 import 'game_tutorial.dart';
+import 'update_page.dart';
 export 'storybook_ui.dart' show GamePainter;
 export 'forest_flame_game.dart' show campSprites, campSpriteBounds;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  await StoryArt.instance.load();
   final prefs = await SharedPreferences.getInstance();
   GameState state;
   try {
@@ -40,7 +40,17 @@ Future<void> main() async {
           GoogleRewardedBackend(),
         )
       : null;
-  runApp(ForestStarApp(prefs: prefs, initialState: state, ads: ads));
+  runApp(
+    GameUpdateGate(
+      prefs: prefs,
+      gameBuilder: (content) => ForestStarApp(
+        prefs: prefs,
+        initialState: state,
+        ads: ads,
+        audio: AppAudio(campMusicPath: content?.filePath('camp-music')),
+      ),
+    ),
+  );
 }
 
 class ForestStarApp extends StatefulWidget {

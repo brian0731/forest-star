@@ -15,6 +15,8 @@ abstract class GameAudio {
 }
 
 class AppAudio implements GameAudio {
+  AppAudio({this.campMusicPath});
+  final String? campMusicPath;
   final AudioPlayer _music = AudioPlayer();
   final AudioPlayer _effects = AudioPlayer();
   bool _enabled = true,
@@ -49,6 +51,7 @@ class AppAudio implements GameAudio {
       await _music.setReleaseMode(ReleaseMode.loop);
       final nativeMidi =
           scene == MusicScene.camp &&
+          campMusicPath == null &&
           !kIsWeb &&
           defaultTargetPlatform == TargetPlatform.android &&
           !_campMidiUnavailable;
@@ -57,9 +60,16 @@ class AppAudio implements GameAudio {
           : 'audio/forest_loop.wav';
       final volume = scene == MusicScene.camp ? .44 : .32;
       try {
-        await _music.play(AssetSource(path), volume: volume);
+        final remotePath = scene == MusicScene.camp ? campMusicPath : null;
+        await _music.play(
+          remotePath == null ? AssetSource(path) : DeviceFileSource(remotePath),
+          volume: volume,
+        );
       } catch (_) {
-        if (!nativeMidi) rethrow;
+        if (!nativeMidi &&
+            !(scene == MusicScene.camp && campMusicPath != null)) {
+          rethrow;
+        }
         // Some vendor devices have no usable MIDI synthesizer. The same score
         // is bundled as rendered audio, so camp music is still available.
         _campMidiUnavailable = true;

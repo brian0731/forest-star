@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'dart:ui';
+import 'level_data.dart';
 
 class Friend {
   const Friend(
@@ -386,6 +387,7 @@ class Shot {
 }
 
 class Combat {
+  LevelDefinition? _level;
   bool active = false;
   int stage = 1, wave = 1, kills = 0, spawned = 0, nextId = 0;
   double health = 100, maxHealth = 100, spawnTimer = 0, waveTimer = 0;
@@ -401,7 +403,8 @@ class Combat {
   void Function(Offset position, int friend)? onImpact;
   void begin(GameState state) {
     stage = state.stage;
-    maxHealth = 100;
+    _level = LevelBook.current[stage];
+    maxHealth = _level?.health ?? 100;
     team = List.of(state.team);
     attacks = List.filled(BattleLayout.lanes, 0);
     attackFlash = List.filled(BattleLayout.lanes, 0);
@@ -430,23 +433,27 @@ class Combat {
   void tick(double dt) {
     if (!active) return;
     dt = math.min(dt, .05);
-    final quota = 5 + stage ~/ 3 + wave;
+    final definition = _level?.waves[wave - 1];
+    final quota = definition?.count ?? 5 + stage ~/ 3 + wave;
     spawnTimer -= dt;
     if (spawned < quota && spawnTimer <= 0) {
-      final boss = spawned == quota - 1 && wave == 3,
-          hp = (18 + stage * 8 + wave * 4) * (boss ? 3.4 : 1.0);
+      final boss = spawned == quota - 1 && (definition?.bossLast ?? wave == 3),
+          hp =
+              (definition?.health ?? (18 + stage * 8 + wave * 4)) *
+              (boss ? 3.4 : 1.0);
       enemies.add(
         Enemy(
           nextId++,
           (spawned + wave - 1) % BattleLayout.lanes,
           hp,
-          (23 + stage * 1.7 + wave * 1.3) * (boss ? .7 : 1),
+          (definition?.speed ?? (23 + stage * 1.7 + wave * 1.3)) *
+              (boss ? .7 : 1),
           (spawned + stage + wave) % 3,
           boss,
         ),
       );
       spawned++;
-      spawnTimer = math.max(.43, .91 - stage * .035);
+      spawnTimer = definition?.interval ?? math.max(.43, .91 - stage * .035);
     }
     for (final e in enemies) {
       e.slow = math.max(0, e.slow - dt);

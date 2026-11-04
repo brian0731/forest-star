@@ -1,18 +1,32 @@
 import 'dart:math' as math;
 import 'dart:collection';
+import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'game.dart';
 import 'interaction_motion.dart';
+import 'content_updates.dart';
 
 class StoryArt {
   StoryArt._();
   static final instance = StoryArt._();
   final images = <String, ui.Image>{};
   Future<void>? _loading;
-  Future<void> load() => _loading ??= _load();
-  Future<void> _load() async {
+  Future<void> load({ContentBundle? content}) {
+    if (content != null || _loading == null) {
+      _loading = _load(content: content).catchError((
+        Object error,
+        StackTrace stack,
+      ) {
+        _loading = null;
+        Error.throwWithStackTrace(error, stack);
+      });
+    }
+    return _loading!;
+  }
+
+  Future<void> _load({ContentBundle? content}) async {
     final paths = <String, String>{
       'board': 'assets/storybook/pinball-board-v2.webp',
       'field': 'assets/storybook/guard-horizontal-v1.webp',
@@ -33,14 +47,34 @@ class StoryArt {
       for (final name in ['paper', 'green', 'cream', 'selected'])
         'frame-$name': 'assets/storybook/frame-$name-v1.png',
     };
-    await Future.wait(
-      paths.entries.map((entry) async {
-        final data = await rootBundle.load(entry.value);
-        final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-        images[entry.key] = (await codec.getNextFrame()).image;
-        codec.dispose();
-      }),
-    );
+    final loaded = <String, ui.Image>{};
+    try {
+      await Future.wait(
+        paths.entries.map((entry) async {
+          final path = content?.filePath(entry.key);
+          final bytes = path == null
+              ? (await rootBundle.load(entry.value)).buffer.asUint8List()
+              : await File(path).readAsBytes();
+          final codec = await ui.instantiateImageCodec(bytes);
+          try {
+            loaded[entry.key] = (await codec.getNextFrame()).image;
+          } finally {
+            codec.dispose();
+          }
+        }),
+      );
+    } catch (_) {
+      for (final image in loaded.values) {
+        image.dispose();
+      }
+      rethrow;
+    }
+    for (final image in images.values) {
+      image.dispose();
+    }
+    images
+      ..clear()
+      ..addAll(loaded);
   }
 }
 
