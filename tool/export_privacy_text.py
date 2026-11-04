@@ -3,7 +3,9 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SOURCE = ROOT.parents[1] / 'Builds/GooglePlay/privacy-policy.html'
+SOURCE = ROOT / 'server/updates/public/privacy-policy.html'
+if not SOURCE.exists():
+    SOURCE = ROOT.parents[1] / 'Builds/GooglePlay/privacy-policy.html'
 
 class PolicyText(HTMLParser):
     def __init__(self):

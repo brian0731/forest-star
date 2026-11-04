@@ -12,6 +12,7 @@ import 'forest_effects.dart';
 import 'growth_showcase.dart';
 import 'interaction_motion.dart';
 import 'camp_patrol.dart';
+import 'ultimate_showcase.dart';
 
 const campSprites = [
   'assets/camp-pinball-sprite-v1.png',
@@ -65,6 +66,7 @@ class ForestFlameGame extends FlameGame {
   EdgeInsets safeInsets = EdgeInsets.zero;
   int updateCount = 0;
   bool sceneReady = false;
+  bool reducedMotion = false;
   late GamePainter lastPainter;
 
   @override
@@ -95,7 +97,27 @@ class ForestFlameGame extends FlameGame {
     await stage.add(_SceneControls(session));
     effects = ForestEffects(session);
     await stage.add(effects);
-    await stage.add(GrowthShowcase(session));
+    await stage.add(
+      UltimateShowcase(
+        session,
+        viewport: () => Rect.fromPoints(
+          layout!.toScene(Offset.zero),
+          layout!.toScene(Offset(canvasSize.x, canvasSize.y)),
+        ),
+        reduceMotion: () => reducedMotion,
+      ),
+    );
+    await stage.add(
+      GrowthShowcase(
+        session,
+        // Draw beyond the fitted safe frame, including notches and the bottom
+        // gesture area. Keep character, text and input on the existing layout.
+        viewport: () => Rect.fromPoints(
+          layout!.toScene(Offset.zero),
+          layout!.toScene(Offset(canvasSize.x, canvasSize.y)),
+        ),
+      ),
+    );
     _resizeStage();
     sceneReady = true;
   }
@@ -142,7 +164,11 @@ class ForestFlameGame extends FlameGame {
         art[session.tab == 1
             ? 'room'
             : session.tab == 2
-            ? 'battle'
+            ? StoryArt.instance.battleFieldKey(
+                session.combat.active
+                    ? session.combat.stage
+                    : session.state.stage,
+              )
             : 'camp'];
     if (background != null) {
       final l = sceneLayout!;

@@ -56,7 +56,10 @@ void main() {
         }
         expect(ball.active, isFalse);
         expect(ball.lastBucket, id);
-        expect(state.growth, List.generate(6, (i) => i == id ? 17 : 0));
+        expect(
+          state.growth,
+          List.generate(friends.length, (i) => i == id ? 17 : 0),
+        );
         expect(state.sugar, 68);
         session.update(.1);
         expect(state.growth[id], 17);
@@ -99,7 +102,7 @@ void main() {
       expect(state.evolutions[0], 2);
       expect(state.growth[0], lessThanOrEqualTo(999999));
       final old = GameState().toJson()..remove('growth');
-      expect(GameState.fromJson(old).growth, List.filled(6, 0));
+      expect(GameState.fromJson(old).growth, List.filled(friends.length, 0));
       expect(GameState.fromJson(state.toJson()).toJson(), state.toJson());
     },
   );

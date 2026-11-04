@@ -6,6 +6,7 @@
     <application
         android:label="森星小隊"
         android:name="${applicationName}"
+        android:allowBackup="false"
         android:icon="@mipmap/forest_star_launcher">
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="${admobAppId}"/>
         <activity

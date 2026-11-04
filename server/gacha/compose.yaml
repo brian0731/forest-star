@@ -1,0 +1,23 @@
+services:
+  gacha:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8081:8081"
+    env_file: .env
+    volumes:
+      - gacha-data:/data
+      - ./secrets:/run/secrets:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop: [ALL]
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+volumes:
+  gacha-data:

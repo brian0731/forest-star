@@ -1,5 +1,11 @@
 # 森星小隊 · Flutter / Flame
 
+森林告示板已改用官方 `webview_flutter`，開始頁預覽與展開頁直接載入 `https://star.singtu.hk/notice.html`，支援網站 HTML／CSS／JavaScript、載入進度、重新整理與離線文字備援。公告更新不需要重打包；本次插件接入仍需下次手動建置新版 App 才會生效。詳見 [WebView 告示板設定](docs/NOTICE_BOARD_SETUP.zh-TW.md)。
+
+星願轉珠：每天香港時間 00:00 補滿 5 次免費，新增 20 隻去背寵物（夥伴共 26 位），也可抽到星糖或彈珠。寵物合計 30%／每隻 1.5%，星糖 45%，彈珠 25%；重複寵物轉為 40 成長分。免費用完後使用 App Store／Google Play 內購的「10 次轉珠」消耗品，正式價格由商店提供。已加入官方 `in_app_purchase`、交易核驗後端、錢包備份及斷線補領；**正式付費尚未開通**，請先完成 [內購及 VPS 設定](docs/GACHA_IAP_SETUP.zh-TW.md) 與沙盒驗收。角色提示詞見 [新寵物素材](docs/PET_ART_PROMPTS.md)。
+
+開始頁加入可由伺服器更新的 HTML 告示板、APIXGo `gpt-image-2.5-flare` 生成的開始按鈕／森林背景，以及 Flame 透明角色互動、螢光粒子、視差與透視效果。公告檔案與 VPS 上傳步驟見 [告示板設定](docs/NOTICE_BOARD_SETUP.zh-TW.md)。目前為原始碼更新，尚未建置新版 APK／IPA 或部署公告。
+
 1.10.1（Build 21）支援超過 200 MB 的伺服器內容包：圖片、兩首原創 MP3 及第 2 關「螢光秘林」。下載／校驗改為串流，整包上限 512 MiB，音樂單檔 128 MiB。220.49 MiB 測試包、媒體來源、VPS 上傳與驗收見 [第 2 關大包測試教學](docs/LEVEL2_200MB_SERVER_TEST.zh-TW.md)。媒體不放進 APK／IPA 或 Git。
 
 1.10.0（Build 20）加入 `https://star.singtu.hk` 啟動更新頁：實際下載百分比／大小、SHA-256 校驗、保留上一版本、離線進入遊戲。伺服器部署及操作見 [SERVER 設定教學](docs/GAME_UPDATE_SERVER_SETUP.zh-TW.md)。Build 20 不支援上述大包。

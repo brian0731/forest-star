@@ -53,11 +53,13 @@ void writeSound(String name, double duration, List<Note> notes) {
       Endian.little,
     );
   }
-  File('assets/audio/$name.wav').writeAsBytesSync(bytes.buffer.asUint8List());
+  File(
+    'server/updates/source/legacy-audio/$name.wav',
+  ).writeAsBytesSync(bytes.buffer.asUint8List());
 }
 
 void main() {
-  Directory('assets/audio').createSync(recursive: true);
+  Directory('server/updates/source/legacy-audio').createSync(recursive: true);
   const melody = [
     523.25,
     659.25,

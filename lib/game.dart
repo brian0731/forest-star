@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'dart:ui';
 import 'level_data.dart';
+import 'ultimate_spell.dart';
+
+enum FriendSkill { rapid, slow, splash, guard, chain, heavy }
 
 class Friend {
   const Friend(
@@ -9,31 +12,241 @@ class Friend {
     this.description,
     this.color,
     this.damage,
-    this.interval,
-  );
+    this.interval, {
+    this.skill = FriendSkill.rapid,
+    this.element,
+  });
   final String name, role, description;
   final Color color;
   final double damage, interval;
+  final FriendSkill skill;
+  final int? element;
+  UltimateKind get ultimateKind {
+    if (skill == FriendSkill.guard) return UltimateKind.earth;
+    if (element == 2) return UltimateKind.fire;
+    if (element == 1) return UltimateKind.water;
+    if (element == 0) return UltimateKind.nature;
+    if (skill == FriendSkill.chain) return UltimateKind.lightning;
+    return UltimateKind.moon;
+  }
 }
 
 const friends = <Friend>[
-  Friend('芽耳兔', '連射', '輕快的森林射手，攻擊速度最快。', Color(0xff91c99d), 8, .78),
-  Friend('泡泡獺', '緩速', '水泡命中後，使敵人減速 35%。', Color(0xff87c8df), 11, 1.05),
-  Friend('燈尾狐', '範圍', '火花同時傷害附近的敵人。', Color(0xfff2ad80), 14, 1.35),
-  Friend('苔石龜', '守護', '上陣時，營地耐久額外增加 25。', Color(0xffb4be91), 18, 1.5),
-  Friend('星絨雀', '連鎖', '電光會跳向另一條路的敵人。', Color(0xfff0d780), 10, 1),
-  Friend('月眠貓', '重擊', '每三次攻擊觸發一次雙倍傷害。', Color(0xffb8abd9), 17, 1.4),
+  Friend('芽耳兔', '連射', '輕快的森林射手，攻擊速度最快。', Color(0xff91c99d), 8, .78, element: 0),
+  Friend(
+    '泡泡獺',
+    '緩速',
+    '水泡命中後，使敵人減速 35%。',
+    Color(0xff87c8df),
+    11,
+    1.05,
+    skill: FriendSkill.slow,
+    element: 1,
+  ),
+  Friend(
+    '燈尾狐',
+    '範圍',
+    '火花同時傷害附近的敵人。',
+    Color(0xfff2ad80),
+    14,
+    1.35,
+    skill: FriendSkill.splash,
+    element: 2,
+  ),
+  Friend(
+    '苔石龜',
+    '守護',
+    '上陣時，營地耐久額外增加 25。',
+    Color(0xffb4be91),
+    18,
+    1.5,
+    skill: FriendSkill.guard,
+  ),
+  Friend(
+    '星絨雀',
+    '連鎖',
+    '電光會跳向另一條路的敵人。',
+    Color(0xfff0d780),
+    10,
+    1,
+    skill: FriendSkill.chain,
+  ),
+  Friend(
+    '月眠貓',
+    '重擊',
+    '每三次攻擊觸發一次雙倍傷害。',
+    Color(0xffb8abd9),
+    17,
+    1.4,
+    skill: FriendSkill.heavy,
+  ),
+  Friend('花刺蝟', '連射', '嫩芽飛針，輕快連射守護森林。', Color(0xff9ac9a2), 9, .84, element: 0),
+  Friend(
+    '蜜果熊',
+    '守護',
+    '上陣時，營地耐久額外增加 25。',
+    Color(0xffd8b77f),
+    16,
+    1.45,
+    skill: FriendSkill.guard,
+  ),
+  Friend(
+    '櫻角鹿',
+    '連鎖',
+    '花光跳躍，連鎖另一條路的敵人。',
+    Color(0xffe8adba),
+    10,
+    1.08,
+    skill: FriendSkill.chain,
+  ),
+  Friend(
+    '暮羽鴞',
+    '重擊',
+    '每三次月羽攻擊觸發雙倍傷害。',
+    Color(0xffb6a4d3),
+    16,
+    1.36,
+    skill: FriendSkill.heavy,
+  ),
+  Friend('橡果松鼠', '連射', '敏捷投出橡果，持續打擊敵人。', Color(0xffc9946b), 8, .79, element: 0),
+  Friend(
+    '雪團企鵝',
+    '緩速',
+    '冰涼雪球命中，使敵人減速 35%。',
+    Color(0xffa5d9e6),
+    11,
+    1.12,
+    skill: FriendSkill.slow,
+    element: 1,
+  ),
+  Friend(
+    '珊瑚螈',
+    '範圍',
+    '珊瑚泡泡傷害同一路的附近敵人。',
+    Color(0xffeba7ae),
+    13,
+    1.30,
+    skill: FriendSkill.splash,
+    element: 1,
+  ),
+  Friend(
+    '葉隱龍',
+    '守護',
+    '葉片屏障讓營地耐久額外增加 25。',
+    Color(0xff95c8ae),
+    17,
+    1.48,
+    skill: FriendSkill.guard,
+  ),
+  Friend(
+    '楓尾熊貓',
+    '範圍',
+    '楓火花傷害同一路的附近敵人。',
+    Color(0xffd99b7e),
+    14,
+    1.38,
+    skill: FriendSkill.splash,
+    element: 2,
+  ),
+  Friend('日葵犬', '連射', '陽光種子快速連射，充滿活力。', Color(0xffe8cc81), 9, .87, element: 0),
+  Friend(
+    '雲朵象',
+    '守護',
+    '雲朵護盾讓營地耐久額外增加 25。',
+    Color(0xffa6c9e1),
+    18,
+    1.60,
+    skill: FriendSkill.guard,
+  ),
+  Friend(
+    '桃貝海豹',
+    '緩速',
+    '桃色水珠命中，使敵人減速 35%。',
+    Color(0xffe2b0b6),
+    12,
+    1.18,
+    skill: FriendSkill.slow,
+    element: 1,
+  ),
+  Friend(
+    '荷葉蛙',
+    '連鎖',
+    '荷光跳向另一條路的敵人。',
+    Color(0xff9ccca9),
+    10,
+    1.04,
+    skill: FriendSkill.chain,
+  ),
+  Friend(
+    '星翼蝠',
+    '重擊',
+    '每三次星波攻擊觸發雙倍傷害。',
+    Color(0xffb9a0cc),
+    16,
+    1.39,
+    skill: FriendSkill.heavy,
+  ),
+  Friend(
+    '鈴絨羊駝',
+    '連鎖',
+    '鈴聲星光連鎖另一條路的敵人。',
+    Color(0xffd9bdab),
+    11,
+    1.14,
+    skill: FriendSkill.chain,
+  ),
+  Friend(
+    '霜角鯨',
+    '緩速',
+    '霜晶命中，使敵人減速 35%。',
+    Color(0xffa4cde3),
+    12,
+    1.20,
+    skill: FriendSkill.slow,
+    element: 1,
+  ),
+  Friend(
+    '青鱗穿山甲',
+    '守護',
+    '青鱗屏障讓營地耐久額外增加 25。',
+    Color(0xffaab98c),
+    18,
+    1.58,
+    skill: FriendSkill.guard,
+  ),
+  Friend('莓尾貂', '連射', '靈巧莓果連射，守住森林小路。', Color(0xffc6afd4), 9, .83, element: 0),
+  Friend(
+    '桃羽紅鶴',
+    '連鎖',
+    '羽光連鎖另一條路的敵人。',
+    Color(0xffe6abb9),
+    10,
+    1.06,
+    skill: FriendSkill.chain,
+  ),
+  Friend(
+    '晶芽幼龍',
+    '範圍',
+    '晶焰同時傷害同一路的附近敵人。',
+    Color(0xff8ecac4),
+    15,
+    1.46,
+    skill: FriendSkill.splash,
+    element: 2,
+  ),
 ];
 
 class GameState {
   int sugar = 60, dew = 3, marbles = 20, stage = 1, clearedStage = 0;
   int shots = 0, upgrades = 0, victories = 0;
   bool sound = true;
-  List<int> levels = [1, 1, 1, 1, 1, 1],
-      evolutions = [0, 0, 0, 0, 0, 0],
+  List<int> levels = List.filled(friends.length, 1),
+      evolutions = List.filled(friends.length, 0),
       team = [0, 1, 2, -1];
-  List<bool> unlocked = [true, true, true, false, false, false];
-  List<int> growth = List.filled(6, 0);
+  List<bool> unlocked = List.generate(friends.length, (id) => id < 3);
+  List<int> growth = List.filled(friends.length, 0);
+  int drawDay = 0, freeDrawsUsed = 0;
+  Map<String, int> paidDrawSequences = {};
 
   int growthCost(int id) => unlocked[id] ? 24 + levels[id] * 12 : 40;
   GrowthResult awardGrowth(int id, int points) {
@@ -95,7 +308,7 @@ class GameState {
   }
 
   bool unlock(int id) {
-    if (unlocked[id] || sugar < 80) return false;
+    if (id >= 6 || unlocked[id] || sugar < 80) return false;
     sugar -= 80;
     unlocked[id] = true;
     return true;
@@ -128,6 +341,9 @@ class GameState {
     'team': team,
     'unlocked': unlocked,
     'growth': growth,
+    'drawDay': drawDay,
+    'freeDrawsUsed': freeDrawsUsed,
+    'paidDrawSequences': paidDrawSequences,
   };
   static GameState fromJson(Map<String, dynamic> json) {
     final s = GameState();
@@ -137,10 +353,15 @@ class GameState {
     List<int> ints(String key, List<int> fallback, int min, int max) {
       final raw = json[key];
       if (raw is! List ||
-          raw.length != fallback.length ||
+          (raw.length != fallback.length && raw.length != 6) ||
           raw.any((e) => e is! num))
         return fallback;
-      return raw.map((e) => (e as num).toInt().clamp(min, max)).toList();
+      return List.generate(
+        fallback.length,
+        (id) => id < raw.length
+            ? (raw[id] as num).toInt().clamp(min, max)
+            : fallback[id],
+      );
     }
 
     s.sugar = value('sugar', 60, 0, 999999);
@@ -155,11 +376,28 @@ class GameState {
     s.levels = ints('levels', s.levels, 1, 10);
     s.evolutions = ints('evolutions', s.evolutions, 0, 2);
     s.growth = ints('growth', s.growth, 0, 999999);
+    s.drawDay = value('drawDay', 0, 0, 99999999);
+    s.freeDrawsUsed = value('freeDrawsUsed', 0, 0, 5);
+    final sequences = json['paidDrawSequences'];
+    if (sequences is Map) {
+      for (final entry in sequences.entries) {
+        if (entry.key is String &&
+            (entry.key as String).length == 36 &&
+            entry.value is int &&
+            entry.value >= 0 &&
+            entry.value < 2147483647) {
+          s.paidDrawSequences[entry.key as String] = entry.value as int;
+        }
+      }
+    }
     final unlocked = json['unlocked'];
     if (unlocked is List &&
-        unlocked.length == 6 &&
+        (unlocked.length == 6 || unlocked.length == friends.length) &&
         unlocked.every((e) => e is bool))
-      s.unlocked = unlocked.cast<bool>().toList();
+      s.unlocked = List.generate(
+        friends.length,
+        (id) => id < unlocked.length ? unlocked[id] as bool : false,
+      );
     s.unlocked.setRange(0, 3, [true, true, true]);
     final rawTeam = json['team'];
     if (rawTeam is List &&
@@ -171,7 +409,7 @@ class GameState {
           equipped.every((id) => s.unlocked[id])) {
         if (team.length == 3) {
           final available = List.generate(
-            6,
+            friends.length,
             (id) => id,
           ).where((id) => s.unlocked[id] && !team.contains(id));
           team.add(available.isEmpty ? -1 : available.first);
@@ -365,6 +603,8 @@ class BattleLayout {
   static const field = Rect.fromLTWH(39, 270, 402, 383);
   static double laneY(int lane) => 316 + lane * 93.0;
   static String laneName(int lane) => '第 ${lane + 1} 路';
+  static Rect ultimateButton(int lane) =>
+      Rect.fromLTWH(24 + lane * 110.0, 684, 102, 59);
 }
 
 class Enemy {
@@ -398,6 +638,8 @@ class Combat {
       attackFlash = List.filled(4, 0);
   List<Enemy> enemies = [];
   List<Shot> shots = [];
+  List<bool> ultimateUsed = List.filled(BattleLayout.lanes, false);
+  int? _pendingUltimate;
   void Function(bool)? onFinished;
   void Function()? onAttack;
   void Function(Offset position, int friend)? onImpact;
@@ -408,6 +650,8 @@ class Combat {
     team = List.of(state.team);
     attacks = List.filled(BattleLayout.lanes, 0);
     attackFlash = List.filled(BattleLayout.lanes, 0);
+    ultimateUsed = List.filled(BattleLayout.lanes, false);
+    _pendingUltimate = null;
     damages = [];
     intervals = [];
     timers = [];
@@ -416,7 +660,7 @@ class Combat {
       damages.add(id < 0 ? 0 : state.damage(id));
       intervals.add(id < 0 ? 1 : friends[id].interval);
       timers.add(.2 * i);
-      if (id == 3) maxHealth += 25;
+      if (id >= 0 && friends[id].skill == FriendSkill.guard) maxHealth += 25;
     }
     health = maxHealth;
     wave = 1;
@@ -428,6 +672,51 @@ class Combat {
     enemies = [];
     shots = [];
     active = true;
+  }
+
+  bool canCastUltimate(int lane) =>
+      active &&
+      _pendingUltimate == null &&
+      lane >= 0 &&
+      lane < BattleLayout.lanes &&
+      team[lane] >= 0 &&
+      !ultimateUsed[lane] &&
+      enemies.any((enemy) => enemy.hp > 0);
+
+  bool reserveUltimate(int lane) {
+    if (!canCastUltimate(lane)) return false;
+    ultimateUsed[lane] = true;
+    _pendingUltimate = lane;
+    return true;
+  }
+
+  /// Resolve at the cinematic impact frame, never at button press. Kills feed
+  /// the regular wave/reward flow; a reserved spell cannot resolve twice.
+  bool resolveUltimate(int lane) {
+    if (!active || _pendingUltimate != lane) return false;
+    _pendingUltimate = null;
+    final id = team[lane], kind = friends[id].ultimateKind;
+    final spell = UltimateSpell.of(kind);
+    if (kind == UltimateKind.earth) {
+      health = math.min(maxHealth, health + maxHealth * .25);
+    }
+    for (final enemy in enemies.where((enemy) => enemy.hp > 0)) {
+      enemy.hp -=
+          damages[lane] * (enemy.lane == lane ? spell.damage : spell.splash);
+      enemy.flash = 1;
+      if (kind == UltimateKind.water) enemy.slow = math.max(enemy.slow, 4);
+      if (kind == UltimateKind.nature || kind == UltimateKind.lightning) {
+        enemy.x = math.min(BattleLayout.spawnX, enemy.x + 28);
+      }
+      onImpact?.call(Offset(enemy.x, enemy.y), id);
+    }
+    final dead = enemies.where((enemy) => enemy.hp <= 0).toList();
+    kills += dead.length;
+    enemies.removeWhere((enemy) => enemy.hp <= 0);
+    // Discard projectiles whose target was removed, avoiding phantom impacts.
+    final living = enemies.map((enemy) => enemy.id).toSet();
+    shots.removeWhere((shot) => !living.contains(shot.targetId));
+    return true;
   }
 
   void tick(double dt) {
@@ -478,7 +767,8 @@ class Combat {
       final id = team[lane];
       attacks[lane]++;
       var damage = damages[lane];
-      if (id == 5 && attacks[lane] % 3 == 0) damage *= 2;
+      if (friends[id].skill == FriendSkill.heavy && attacks[lane] % 3 == 0)
+        damage *= 2;
       shots.add(Shot(lane, targets.first.id, id, damage));
       onAttack?.call();
       attackFlash[lane] = 1;
@@ -503,7 +793,7 @@ class Combat {
       }
       if ((Offset(shot.x, shot.y) - Offset(tx, ty)).distance > 9) continue;
       final affected = <Enemy>[target];
-      if (shot.friend == 2) {
+      if (friends[shot.friend].skill == FriendSkill.splash) {
         affected.addAll(
           enemies.where(
             (e) =>
@@ -513,7 +803,7 @@ class Combat {
           ),
         );
       }
-      if (shot.friend == 4) {
+      if (friends[shot.friend].skill == FriendSkill.chain) {
         final others = enemies.where(
           (e) =>
               e != target &&
@@ -523,13 +813,14 @@ class Combat {
         if (others.isNotEmpty) affected.add(others.first);
       }
       for (final e in affected) {
-        final mult = shot.friend < 3 && e.element != shot.friend
-            ? ((shot.friend + 1) % 3 == e.element ? 1.35 : .8)
+        final element = friends[shot.friend].element;
+        final mult = element != null && e.element != element
+            ? ((element + 1) % 3 == e.element ? 1.35 : .8)
             : 1.0;
         e.hp -= shot.damage * mult * (e == target ? 1 : .55);
         e.flash = 1;
         onImpact?.call(Offset(e.x, e.y), shot.friend);
-        if (shot.friend == 1) e.slow = 1.8;
+        if (friends[shot.friend].skill == FriendSkill.slow) e.slow = 1.8;
       }
       shots.remove(shot);
     }
@@ -553,6 +844,7 @@ class Combat {
 
   void finish(bool won) {
     active = false;
+    _pendingUltimate = null;
     shots.clear();
     onFinished?.call(won);
   }

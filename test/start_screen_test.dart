@@ -90,6 +90,9 @@ void main() {
       addTearDown(tester.view.resetPadding);
       SharedPreferences.setMockInitialValues({});
       final prefs = await SharedPreferences.getInstance(), audio = FakeAudio();
+      // The start scene now uses sprites before the adventure begins. Decode
+      // outside FakeAsync so its shared cache remains usable across test cases.
+      await tester.runAsync(() => StoryArt.instance.load());
       await tester.pumpWidget(
         ForestStarApp(prefs: prefs, initialState: GameState(), audio: audio),
       );
@@ -185,6 +188,7 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
     SharedPreferences.setMockInitialValues({});
     final prefs = await SharedPreferences.getInstance(), audio = FakeAudio();
+    await tester.runAsync(() => StoryArt.instance.load());
     await tester.pumpWidget(
       ForestStarApp(prefs: prefs, initialState: GameState(), audio: audio),
     );

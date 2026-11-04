@@ -7,10 +7,12 @@ import 'game_session.dart';
 import 'storybook_ui.dart';
 
 /// A bounded, time-based celebration with perspective, depth and radial particles.
-/// All coordinates share the game's safe frame; input is gated by GameSession.
+/// Foreground coordinates share the safe frame; the backdrop covers the viewport.
+/// Input is gated by GameSession.
 class GrowthShowcase extends Component {
-  GrowthShowcase(this.session) : super(priority: 2000);
+  GrowthShowcase(this.session, {this.viewport}) : super(priority: 2000);
   final GameSession session;
+  final Rect Function()? viewport;
   final _text = <String, TextPainter>{};
 
   void label(Canvas canvas, String value, double y, double size, Color color) {
@@ -49,9 +51,10 @@ class GrowthShowcase extends Component {
     final reveal = ((t - .3) / .6).clamp(0.0, 1.0);
     final burst = math.max(0.0, t - .55);
     final color = friends[event.friend].color;
+    final backdrop = viewport?.call() ?? const Rect.fromLTWH(0, 0, 480, 900);
     const center = Offset(240, 416);
     canvas.drawRect(
-      const Rect.fromLTWH(0, 0, 480, 900),
+      backdrop,
       Paint()..color = const Color(0xff102f32).withValues(alpha: .93 * fade),
     );
     canvas.drawCircle(
@@ -205,7 +208,7 @@ class GrowthShowcase extends Component {
     // A short, restrained flash marks the instant of transformation.
     final flash = (1 - (t - .55).abs() / .13).clamp(0.0, 1.0);
     canvas.drawRect(
-      const Rect.fromLTWH(0, 0, 480, 900),
+      backdrop,
       Paint()..color = const Color(0xfffff4cf).withValues(alpha: flash * .3),
     );
     label(

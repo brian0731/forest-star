@@ -2,7 +2,18 @@ import 'dart:async';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
-enum SoundEffect { select, launch, bounce, reward, battle, hit, win, fail }
+enum SoundEffect {
+  select,
+  launch,
+  bounce,
+  reward,
+  battle,
+  hit,
+  win,
+  fail,
+  magicCharge,
+  magicImpact,
+}
 
 enum MusicScene { camp, adventure }
 
@@ -15,15 +26,20 @@ abstract class GameAudio {
 }
 
 class AppAudio implements GameAudio {
-  AppAudio({this.campMusicPath, this.adventureMusicPath});
+  AppAudio({
+    this.campMusicPath,
+    this.adventureMusicPath,
+    this.effectPaths = const {},
+  });
   final String? campMusicPath, adventureMusicPath;
+  final Map<String, String> effectPaths;
   final AudioPlayer _music = AudioPlayer();
   final AudioPlayer _effects = AudioPlayer();
   bool _enabled = true,
       _foreground = true,
       _disposed = false,
-      _effectsConfigured = false,
-      _campMidiUnavailable = false;
+      _musicAvailable = false,
+      _effectsConfigured = false;
   MusicScene _scene = MusicScene.camp;
   MusicScene? _loadedScene;
   Future<void> _queue = Future.value();
@@ -47,46 +63,26 @@ class AppAudio implements GameAudio {
     }
     final scene = _scene;
     if (_loadedScene != scene) {
+      _musicAvailable = false;
       await _music.stop();
       await _music.setReleaseMode(ReleaseMode.loop);
-      final nativeMidi =
-          scene == MusicScene.camp &&
-          campMusicPath == null &&
-          !kIsWeb &&
-          defaultTargetPlatform == TargetPlatform.android &&
-          !_campMidiUnavailable;
-      final path = scene == MusicScene.camp
-          ? 'audio/forest_camp.${nativeMidi ? 'mid' : 'wav'}'
-          : 'audio/forest_loop.wav';
-      final volume = scene == MusicScene.camp ? .44 : .32;
-      try {
-        final remotePath = scene == MusicScene.camp
-            ? campMusicPath
-            : adventureMusicPath;
-        await _music.play(
-          remotePath == null ? AssetSource(path) : DeviceFileSource(remotePath),
-          volume: volume,
-        );
-      } catch (_) {
-        if (!nativeMidi &&
-            (scene == MusicScene.camp ? campMusicPath : adventureMusicPath) ==
-                null) {
-          rethrow;
+      final volume = scene == MusicScene.camp ? .40 : .34;
+      final remotePath = scene == MusicScene.camp
+          ? campMusicPath
+          : adventureMusicPath;
+      // Music is downloaded and verified by ContentUpdates. There is no BGM
+      // in the application bundle, nor a direct network stream during play.
+      if (remotePath != null) {
+        try {
+          await _music.play(DeviceFileSource(remotePath), volume: volume);
+          _musicAvailable = true;
+        } catch (error) {
+          debugPrint('Cached music unavailable: $error');
+          await _music.stop();
         }
-        // Some vendor devices have no usable MIDI synthesizer. The same score
-        // is bundled as rendered audio, so camp music is still available.
-        _campMidiUnavailable = true;
-        await _music.play(
-          AssetSource(
-            scene == MusicScene.camp
-                ? 'audio/forest_camp.wav'
-                : 'audio/forest_loop.wav',
-          ),
-          volume: volume,
-        );
       }
       _loadedScene = scene;
-    } else {
+    } else if (_musicAvailable) {
       await _music.resume();
     }
     // A mute or lifecycle change can arrive while the native source prepares.
@@ -115,6 +111,10 @@ class AppAudio implements GameAudio {
   @override
   void play(SoundEffect effect) {
     if (!_enabled || !_foreground || _disposed) return;
+    final localMagic =
+        effect == SoundEffect.magicCharge || effect == SoundEffect.magicImpact;
+    final cachedPath = effectPaths[effect.name];
+    if (!localMagic && cachedPath == null) return;
     final now = DateTime.now();
     if (effect == SoundEffect.bounce) {
       if (_lastBounce != null &&
@@ -143,7 +143,17 @@ class AppAudio implements GameAudio {
         );
         _effectsConfigured = true;
       }
-      await _effects.play(AssetSource('audio/${effect.name}.wav'), volume: .55);
+      await _effects.play(
+        cachedPath != null
+            ? DeviceFileSource(cachedPath)
+            : AssetSource('audio/${effect.name}.wav'),
+        volume: switch (effect) {
+          SoundEffect.hit || SoundEffect.bounce => .24,
+          SoundEffect.magicCharge => .42,
+          SoundEffect.magicImpact => .52,
+          _ => .36,
+        },
+      );
     });
   }
 

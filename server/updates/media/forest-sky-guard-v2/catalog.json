@@ -1,0 +1,175 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "forest-sky-guard-v2",
+  "totalBytes": 6958250,
+  "files": [
+    {
+      "key": "camp",
+      "kind": "image",
+      "path": "camp.webp",
+      "bytes": 551104,
+      "sha256": "56b008ea1640916f3201f4bb1b831cc50444f973e3c8bb3ebb4bbe8cbde4f89b",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/camp.webp"
+    },
+    {
+      "key": "field-level2",
+      "kind": "image",
+      "path": "field-level2.webp",
+      "bytes": 242496,
+      "sha256": "1acf72baf0bbf7e41754f5d7db1875f77732183f26401aefd1947b1d5bc6cca9",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/field-level2.webp"
+    },
+    {
+      "key": "levels",
+      "kind": "levels",
+      "path": "levels.json",
+      "bytes": 1547,
+      "sha256": "7c93e3906b35ab78b6a1f072fc770619391de713a0309152961b28a4108b9bb4",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/levels.json"
+    },
+    {
+      "key": "field-level3",
+      "kind": "image",
+      "path": "guard-stage-3.webp",
+      "bytes": 241236,
+      "sha256": "247265e3cbdb8c2a480c44d722143ad8eaab3bb89c9c7998a0db9b06b2201525",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-3.webp"
+    },
+    {
+      "key": "field-level4",
+      "kind": "image",
+      "path": "guard-stage-4.webp",
+      "bytes": 228954,
+      "sha256": "b676fbe959aee6a35398cef21ec59d345560a6d572e1c42aacff7bff8a3ecea0",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-4.webp"
+    },
+    {
+      "key": "field-level5",
+      "kind": "image",
+      "path": "guard-stage-5.webp",
+      "bytes": 197556,
+      "sha256": "64e4d87d531d752a0ee34db8455d971ed90f43ef93ad47e190928d4c946148c2",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-5.webp"
+    },
+    {
+      "key": "field-level6",
+      "kind": "image",
+      "path": "guard-stage-6.webp",
+      "bytes": 225144,
+      "sha256": "8afe73a5a3219a60833a2173565b21370562176f3100e76a76951a7a09254014",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-6.webp"
+    },
+    {
+      "key": "field-level7",
+      "kind": "image",
+      "path": "guard-stage-7.webp",
+      "bytes": 248322,
+      "sha256": "6c11aaeea9d7165c1211e144f1bf81f854bc06a7cbdf1a4e106a20e84392135b",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-7.webp"
+    },
+    {
+      "key": "field-level8",
+      "kind": "image",
+      "path": "guard-stage-8.webp",
+      "bytes": 208236,
+      "sha256": "559f549b4ae94e6157620f69a9073c50db6287d7fbe0cb8d7850ce5d78f8305b",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-8.webp"
+    },
+    {
+      "key": "field-level9",
+      "kind": "image",
+      "path": "guard-stage-9.webp",
+      "bytes": 168906,
+      "sha256": "662f5faac11ac01ce5ea7f47112a876918165c69d6d2745435f557831f3a2c49",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-9.webp"
+    },
+    {
+      "key": "field-level10",
+      "kind": "image",
+      "path": "guard-stage-10.webp",
+      "bytes": 255668,
+      "sha256": "61a5fad7650ff04f9fbff18c569ac2552de7a38dcdbea88d435d691b908419be",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/guard-stage-10.webp"
+    },
+    {
+      "key": "camp-music-v2",
+      "kind": "audio",
+      "path": "sky-camp-v2.mp3",
+      "bytes": 1921610,
+      "sha256": "e8e349d3ddbd7064e79cd9119c3e04b6fb02721a731b3e7e8e96ae6f2338a898",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/sky-camp-v2.mp3"
+    },
+    {
+      "key": "adventure-music-v2",
+      "kind": "audio",
+      "path": "sky-adventure-v2.mp3",
+      "bytes": 1729767,
+      "sha256": "ee02e031d06a0c80fe1822d6686a4eb3191856368ec908068479841af3c86ddb",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/sky-adventure-v2.mp3"
+    },
+    {
+      "key": "sfx-select-v2",
+      "kind": "audio",
+      "path": "select.wav",
+      "bytes": 38852,
+      "sha256": "e0309e51335b146321926538f98711af43a9e7436ed23d23930a1aec71a5c56d",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/select.wav"
+    },
+    {
+      "key": "sfx-launch-v2",
+      "kind": "audio",
+      "path": "launch.wav",
+      "bytes": 63548,
+      "sha256": "292eb85316d59d6768227184e12fc5dff54dfefb707b7acb9cc12b7c9979a82a",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/launch.wav"
+    },
+    {
+      "key": "sfx-bounce-v2",
+      "kind": "audio",
+      "path": "bounce.wav",
+      "bytes": 28268,
+      "sha256": "d8c38570d6db2f09672c3ff6427818be4f41c79960570464ee5a223137219a75",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/bounce.wav"
+    },
+    {
+      "key": "sfx-reward-v2",
+      "kind": "audio",
+      "path": "reward.wav",
+      "bytes": 137636,
+      "sha256": "32e6677860b7ff8a44cd7e96c0ad9f3a261d9e07d345c531da6a464aca72cb01",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/reward.wav"
+    },
+    {
+      "key": "sfx-battle-v2",
+      "kind": "audio",
+      "path": "battle.wav",
+      "bytes": 97064,
+      "sha256": "32d1aea839a9b8433c0a97d04b03a65e72770d0387fd0e70fda11d2f1cd3d7af",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/battle.wav"
+    },
+    {
+      "key": "sfx-hit-v2",
+      "kind": "audio",
+      "path": "hit.wav",
+      "bytes": 28268,
+      "sha256": "e9ec0fdf22d566704202befbe90507f899b4247ce5a0caf3036f87383d1c8867",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/hit.wav"
+    },
+    {
+      "key": "sfx-win-v2",
+      "kind": "audio",
+      "path": "win.wav",
+      "bytes": 211724,
+      "sha256": "4ee1aa664cb8fdbe1e30b950044ecc7bc3411c7f3648375646eb759e1c1bc838",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/win.wav"
+    },
+    {
+      "key": "sfx-fail-v2",
+      "kind": "audio",
+      "path": "fail.wav",
+      "bytes": 132344,
+      "sha256": "81b07b553f925c7286e3bc33fed149df93abc0cd6df41cc4166a8701ee2e6a1e",
+      "url": "https://star.singtu.hk/content/forest-sky-guard-v2/fail.wav"
+    }
+  ]
+}

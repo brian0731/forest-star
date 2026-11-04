@@ -58,7 +58,15 @@ app.*.map.json
 /output/audio/
 /output/server/
 /output/imagegen/level2-v1/
+/output/imagegen/start-adventure-v1/
+/output/imagegen/pets-v1/
+/output/imagegen/guard-stages-v1/
 **/__pycache__/
+**/node_modules/
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+/server/gacha/secrets/
 *.pfx
 *.key
 *.apks

@@ -12,6 +12,16 @@ const updateHost = 'star.singtu.hk';
 final updateManifestUri = Uri.https(updateHost, '/game/update-v1.json');
 const maxContentFileBytes = 128 * 1024 * 1024;
 const maxContentBundleBytes = 512 * 1024 * 1024;
+const remoteEffectKeys = {
+  'select': 'sfx-select-v2',
+  'launch': 'sfx-launch-v2',
+  'bounce': 'sfx-bounce-v2',
+  'reward': 'sfx-reward-v2',
+  'battle': 'sfx-battle-v2',
+  'hit': 'sfx-hit-v2',
+  'win': 'sfx-win-v2',
+  'fail': 'sfx-fail-v2',
+};
 const imageContentKeys = {
   'camp',
   'board',
@@ -19,6 +29,14 @@ const imageContentKeys = {
   'battle',
   'field',
   'field-level2',
+  'field-level3',
+  'field-level4',
+  'field-level5',
+  'field-level6',
+  'field-level7',
+  'field-level8',
+  'field-level9',
+  'field-level10',
   'location0',
   'location1',
   'location2',
@@ -202,7 +220,13 @@ class ContentFile {
             bytes <= 20 * 1024 * 1024 &&
             {'png', 'webp', 'jpg'}.contains(extension),
       'audio' =>
-        {'camp-music', 'adventure-music'}.contains(key) &&
+        {
+              'camp-music',
+              'adventure-music',
+              'camp-music-v2',
+              'adventure-music-v2',
+              ...remoteEffectKeys.values,
+            }.contains(key) &&
             {'wav', 'mp3', 'm4a'}.contains(extension),
       'levels' => key == 'levels' && extension == 'json' && bytes <= 256 * 1024,
       _ => false,
@@ -254,6 +278,11 @@ class ContentBundle {
     }
     return null;
   }
+
+  Map<String, String> get effectPaths => {
+    for (final entry in remoteEffectKeys.entries)
+      if (filePath(entry.value) case final String path) entry.key: path,
+  };
 }
 
 enum UpdatePhase { checking, available, downloading, verifying, ready, offline }

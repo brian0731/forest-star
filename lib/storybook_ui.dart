@@ -7,14 +7,22 @@ import 'package:flutter/services.dart';
 import 'game.dart';
 import 'interaction_motion.dart';
 import 'content_updates.dart';
+import 'guard_themes.dart';
+import 'companion_layout.dart';
+import 'ultimate_spell.dart';
 
 class StoryArt {
   StoryArt._();
   static final instance = StoryArt._();
   final images = <String, ui.Image>{};
   Future<void>? _loading;
-  Future<void> load({ContentBundle? content}) {
-    if (content != null || _loading == null) {
+  String battleFieldKey(int stage) {
+    final key = GuardTheme.forStage(stage).fieldKey;
+    return images.containsKey(key) ? key : 'field';
+  }
+
+  Future<void> load({ContentBundle? content, bool reset = false}) {
+    if (content != null || _loading == null || reset) {
       _loading = _load(content: content).catchError((
         Object error,
         StackTrace stack,
@@ -30,8 +38,9 @@ class StoryArt {
     final paths = <String, String>{
       'board': 'assets/storybook/pinball-board-v2.webp',
       'field': 'assets/storybook/guard-horizontal-v1.webp',
-      if (content?.filePath('field-level2') != null)
-        'field-level2': 'assets/storybook/guard-horizontal-v1.webp',
+      for (var stage = 2; stage <= 10; stage++)
+        if (content?.filePath('field-level$stage') != null)
+          'field-level$stage': 'assets/storybook/guard-horizontal-v1.webp',
       'camp': 'assets/storybook/camp.webp',
       'room': 'assets/storybook/companions.webp',
       'battle': 'assets/storybook/camp.webp',
@@ -41,8 +50,10 @@ class StoryArt {
           'assets/camp-companions-sprite-v1.png',
           'assets/camp-guard-sprite-v1.png',
         ][i],
-      for (var i = 0; i < 6; i++)
-        'friend$i': 'assets/storybook/character-$i.png',
+      for (var i = 0; i < friends.length; i++)
+        'friend$i': i < 6
+            ? 'assets/storybook/character-$i.png'
+            : 'assets/pets/character-$i.png',
       for (var i = 0; i < 4; i++) 'marble$i': 'assets/storybook/marble-$i.png',
       for (var i = 0; i < 4; i++)
         'nav$i': 'assets/storybook/navigation-$i-v1.png',
@@ -736,27 +747,46 @@ class GamePainter extends CustomPainter {
   }
 
   void squadPage() {
-    section(
-      '夥伴小屋',
-      '一起長大的朋友',
-      '已結識 ${state.unlocked.where((v) => v).length} / 6',
+    panel(20, 132, 440, 71);
+    text(
+      36,
+      141,
+      248,
+      17,
+      '夥伴小屋 · 已結識 ${state.unlocked.where((v) => v).length}/${friends.length}',
+      11,
+      green,
+      bold: true,
     );
-    for (var i = 0; i < 6; i++) {
-      final x = 24.0 + i % 3 * 149, y = 220.0 + i ~/ 3 * 151;
+    text(36, 162, 250, 29, '一起長大的朋友', 22, ink, bold: true);
+    final gallery = CompanionLayout.gallery;
+    button(
+      gallery.left,
+      gallery.top,
+      gallery.width,
+      gallery.height,
+      '全部寵物',
+      size: 15,
+    );
+    final first = selected ~/ 6 * 6;
+    for (var slot = 0; slot < 6 && first + slot < friends.length; slot++) {
+      final i = first + slot;
+      final bounds = CompanionLayout.card(slot);
+      final x = bounds.left, y = bounds.top;
       canvas.save();
-      pressTransform(Rect.fromLTWH(x, y, 132, 140));
+      pressTransform(bounds);
       panel(
         x,
         y,
         132,
-        140,
+        128,
         fill: selected == i ? const Color(0xfffff2c9) : paper,
         radius: 17,
       );
-      portrait(x + 66, y + 51, 91, i, locked: !state.unlocked[i]);
+      portrait(x + 66, y + 43, 79, i, locked: !state.unlocked[i]);
       text(
         x + 4,
-        y + 94,
+        y + 82,
         124,
         23,
         friends[i].name,
@@ -767,11 +797,13 @@ class GamePainter extends CustomPainter {
       );
       text(
         x + 3,
-        y + 114,
+        y + 104,
         126,
         17,
         state.unlocked[i]
             ? 'Lv.${state.levels[i]} · ${state.levels[i] >= 10 ? '成長已滿' : '${state.growth[i]}/${state.growthCost(i)} 分'}'
+            : i >= 6
+            ? '星願轉珠可結識'
             : '成長 ${state.growth[i]}/40 可結識',
         10,
         muted,
@@ -793,6 +825,7 @@ class GamePainter extends CustomPainter {
       }
       canvas.restore();
     }
+    companionPager();
     panel(24, 533, 432, 151);
     portrait(85, 591, 92, selected, locked: !state.unlocked[selected]);
     final f = friends[selected];
@@ -842,7 +875,13 @@ class GamePainter extends CustomPainter {
       2,
     );
     if (!state.unlocked[selected]) {
-      button(24, 698, 432, 52, '結識 ${f.name}  ·  80 星糖');
+      button(
+        24,
+        698,
+        432,
+        52,
+        selected >= 6 ? '前往星願轉珠結識' : '結識 ${f.name}  ·  80 星糖',
+      );
     } else {
       button(
         24,
@@ -876,6 +915,98 @@ class GamePainter extends CustomPainter {
         secondary: state.team[i] != selected,
         size: 12,
       );
+    }
+  }
+
+  void companionPager() {
+    final current = selected ~/ CompanionLayout.pageSize;
+    // Use drawn chevrons, generous touch bounds, and numbered album tabs;
+    // typography no longer determines the shape of navigation arrows.
+    for (final entry in [
+      (CompanionLayout.previous, false),
+      (CompanionLayout.next, true),
+    ]) {
+      final (rect, forward) = entry;
+      button(rect.left, rect.top, rect.width, rect.height, '', secondary: true);
+      canvas.save();
+      pressTransform(rect);
+      final x = forward ? rect.right - 19 : rect.left + 19;
+      final y = rect.center.dy;
+      final direction = forward ? 1.0 : -1.0;
+      line(
+        Offset(x - direction * 3, y - 5),
+        Offset(x + direction * 2, y),
+        brown,
+        2.2,
+      );
+      line(
+        Offset(x + direction * 2, y),
+        Offset(x - direction * 3, y + 5),
+        brown,
+        2.2,
+      );
+      text(
+        rect.left + (forward ? 9 : 27),
+        rect.top,
+        60,
+        rect.height,
+        forward ? '下一頁' : '上一頁',
+        12,
+        brown,
+        bold: true,
+        align: TextAlign.center,
+      );
+      canvas.restore();
+    }
+    for (
+      var page = 0;
+      page < CompanionLayout.pageCount(friends.length);
+      page++
+    ) {
+      final rect = CompanionLayout.page(page);
+      canvas.save();
+      pressTransform(rect);
+      final active = page == current;
+      final pill = RRect.fromRectAndRadius(
+        rect.deflate(3),
+        const Radius.circular(12),
+      );
+      canvas.drawShadow(
+        Path()..addRRect(pill),
+        const Color(0x5538482e),
+        2,
+        false,
+      );
+      canvas.drawRRect(
+        pill,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: active
+                ? [const Color(0xff678d61), green]
+                : [const Color(0xfffff8e5), const Color(0xffefdfb9)],
+          ).createShader(rect),
+      );
+      canvas.drawRRect(
+        pill,
+        Paint()
+          ..color = active ? const Color(0xffd5be82) : const Color(0xffcdb881)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.2,
+      );
+      text(
+        rect.left,
+        rect.top,
+        rect.width,
+        rect.height,
+        '${page + 1}',
+        15,
+        active ? Colors.white : brown,
+        bold: true,
+        align: TextAlign.center,
+      );
+      canvas.restore();
     }
   }
 
@@ -923,16 +1054,21 @@ class GamePainter extends CustomPainter {
 
   void battlePage() {
     final stage = combat.active ? combat.stage : state.stage;
-    final level2Art =
-        stage == 2 && StoryArt.instance.images.containsKey('field-level2');
-    section(
-      level2Art ? '螢光秘林 · 四路防線' : '苔光林地 · 四路防線',
-      '四路夥伴，橫向出擊',
-      '草 → 水 → 火 → 草',
-    );
+    final theme = GuardTheme.forStage(stage);
+    final readyHealth =
+        100.0 +
+        state.team
+                .where(
+                  (id) => id >= 0 && friends[id].skill == FriendSkill.guard,
+                )
+                .length *
+            25;
+    final hp = combat.active || result ? combat.health : readyHealth;
+    final max = combat.active || result ? combat.maxHealth : readyHealth;
+    section('${theme.name} · 四路防線', '四路夥伴，橫向出擊', '每路大招 · 每場 1 次');
     panel(24, 220, 432, 449, radius: 22);
     image(
-      level2Art ? 'field-level2' : 'field',
+      StoryArt.instance.battleFieldKey(stage),
       BattleLayout.field,
       radius: 8,
       fit: BoxFit.contain,
@@ -941,10 +1077,10 @@ class GamePainter extends CustomPainter {
     text(
       51,
       236,
-      201,
+      230,
       23,
-      '第 ${combat.active ? combat.stage : state.stage} / 10 關',
-      13,
+      '第 $stage / 10 關 · 耐久 ${hp.ceil()}/${max.ceil()}',
+      11,
       ink,
       bold: true,
     );
@@ -959,6 +1095,8 @@ class GamePainter extends CustomPainter {
       bold: true,
       align: TextAlign.right,
     );
+    box(41, 264, 398, 3, const Color(0xffd8d2b5), 2);
+    box(41, 264, 398 * (hp / max).clamp(0.0, 1.0), 3, green, 2);
     canvas.save();
     canvas.clipRect(BattleLayout.field);
     for (var lane = 0; lane < BattleLayout.lanes; lane++) {
@@ -1068,40 +1206,61 @@ class GamePainter extends CustomPainter {
     final hurt = motion?.hurtAge ?? 1;
     if (hurt < .35)
       canvas.translate(math.sin(hurt * 75) * 3 * (1 - hurt / .35), 0);
-    panel(24, 685, 432, 56);
-    final readyHealth = state.team.contains(3) ? 125.0 : 100.0;
-    final hp = combat.active || result ? combat.health : readyHealth,
-        max = combat.active || result ? combat.maxHealth : readyHealth;
-    text(41, 692, 150, 22, '營地耐久', 13, ink, bold: true);
-    text(
-      280,
-      692,
-      159,
-      22,
-      '${hp.ceil()} / ${max.ceil()}',
-      12,
-      green,
-      bold: true,
-      align: TextAlign.right,
-    );
-    box(41, 720, 398, 8, const Color(0xffe0d9ba), 5);
-    box(
-      41,
-      720,
-      398 * (hp / max).clamp(0.0, 1.0),
-      8,
-      const Color(0xff82a268),
-      5,
-    );
-    if (hurt < .45) {
-      box(
-        26,
-        687,
-        428,
-        52,
-        Color.fromRGBO(230, 133, 85, (1 - hurt / .45) * .25),
-        12,
+    for (var lane = 0; lane < BattleLayout.lanes; lane++) {
+      final rect = BattleLayout.ultimateButton(lane);
+      final id = (combat.active ? combat.team : state.team)[lane];
+      final used = combat.active && combat.ultimateUsed[lane];
+      final ready = combat.active && id >= 0 && !used;
+      final spell = id < 0 ? null : UltimateSpell.of(friends[id].ultimateKind);
+      button(
+        rect.left,
+        rect.top,
+        rect.width,
+        rect.height,
+        '',
+        secondary: !ready,
+        disabled: !ready,
       );
+      canvas.save();
+      pressTransform(rect);
+      text(
+        rect.left + 5,
+        rect.top + 7,
+        rect.width - 10,
+        15,
+        '${lane + 1} 路 · ${used ? '0/1' : '1/1'}',
+        10,
+        ready ? const Color(0xffffefba) : muted,
+        bold: true,
+        align: TextAlign.center,
+      );
+      text(
+        rect.left + 5,
+        rect.top + 26,
+        rect.width - 10,
+        23,
+        id < 0
+            ? '待上陣'
+            : used
+            ? '本場已用'
+            : !combat.active
+            ? '開戰後可用'
+            : spell!.name,
+        13,
+        ready ? Colors.white : muted,
+        bold: true,
+        align: TextAlign.center,
+      );
+      if (ready) {
+        final glow = .45 + .35 * math.sin(time * 2.5 + lane);
+        circle(
+          rect.left + 13,
+          rect.top + 14,
+          2.0,
+          spell!.highlight.withValues(alpha: glow),
+        );
+      }
+      canvas.restore();
     }
     canvas.restore();
     button(
@@ -1173,24 +1332,15 @@ class GamePainter extends CustomPainter {
       790,
       430,
       23,
-      '夥伴 ${state.unlocked.where((x) => x).length}/6     通關 ${state.clearedStage}/10     彈射 ${state.shots} 次',
+      '夥伴 ${state.unlocked.where((x) => x).length}/${friends.length}     通關 ${state.clearedStage}/10     彈射 ${state.shots} 次',
       12,
       green,
       bold: true,
       align: TextAlign.center,
     );
     final labels = adLabel == null
-        ? [
-            '補給 +12',
-            state.sound ? '聲音：開啟' : '聲音：關閉',
-            resetting ? '再按確認重設' : '重設進度',
-          ]
-        : [
-            '免費 +12',
-            adLabel!,
-            state.sound ? '聲音：開啟' : '聲音：關閉',
-            resetting ? '再按確認' : '重設進度',
-          ];
+        ? ['補給 +12', state.sound ? '聲音：開啟' : '聲音：關閉', '星願轉珠']
+        : ['免費 +12', adLabel!, state.sound ? '聲音：開啟' : '聲音：關閉', '星願轉珠'];
     for (var i = 0; i < labels.length; i++) {
       final x = 20.0 + i * (adLabel == null ? 152 : 108);
       final width = adLabel == null

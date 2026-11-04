@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'game_session.dart';
 import 'game.dart';
 import 'vfx_event.dart';
+import 'guard_themes.dart';
 
 /// Native Flame particles, clipped to scenery so HUD and controls stay clear.
 class ForestEffects extends Component {
@@ -169,36 +170,43 @@ class ForestEffects extends Component {
       }
     }
     if (tab == 2) {
-      for (var i = 0; i < 34; i++) {
-        final speed = 145.0 + i % 4 * 23,
-            x = rect.left + (i * 73.7 - time * 26) % rect.width,
-            y = rect.top + (time * speed + i * 41.7) % rect.height;
-        canvas.drawLine(
-          Offset(x, y),
-          Offset(x - 3, y + 10 + i % 3 * 2),
-          Paint()
-            ..color = const Color(
-              0xffc9eaf2,
-            ).withValues(alpha: .25 + i % 3 * .07)
-            ..strokeWidth = .8
-            ..strokeCap = StrokeCap.round,
-        );
-      }
-      for (var i = 0; i < 6; i++) {
-        final phase = (time * .8 + i * .16) % 1;
-        canvas.drawOval(
-          Rect.fromCenter(
-            center: Offset(68 + i * 67, 450 + i % 3 * 44),
-            width: 4 + phase * 15,
-            height: 2 + phase * 5,
-          ),
-          Paint()
-            ..color = const Color(
-              0xffd4f1f2,
-            ).withValues(alpha: (1 - phase) * .32)
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = .8,
-        );
+      final weather = GuardTheme.forStage(
+        session.combat.active ? session.combat.stage : session.state.stage,
+      ).weather;
+      if (weather == GuardWeather.rain) {
+        for (var i = 0; i < 34; i++) {
+          final speed = 145.0 + i % 4 * 23,
+              x = rect.left + (i * 73.7 - time * 26) % rect.width,
+              y = rect.top + (time * speed + i * 41.7) % rect.height;
+          canvas.drawLine(
+            Offset(x, y),
+            Offset(x - 3, y + 10 + i % 3 * 2),
+            Paint()
+              ..color = const Color(
+                0xffc9eaf2,
+              ).withValues(alpha: .25 + i % 3 * .07)
+              ..strokeWidth = .8
+              ..strokeCap = StrokeCap.round,
+          );
+        }
+        for (var i = 0; i < 6; i++) {
+          final phase = (time * .8 + i * .16) % 1;
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(68 + i * 67, 450 + i % 3 * 44),
+              width: 4 + phase * 15,
+              height: 2 + phase * 5,
+            ),
+            Paint()
+              ..color = const Color(
+                0xffd4f1f2,
+              ).withValues(alpha: (1 - phase) * .32)
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = .8,
+          );
+        }
+      } else {
+        _guardWeather(canvas, rect, weather, time);
       }
     }
     if (tab == 1 || tab == 3) {
@@ -216,6 +224,71 @@ class ForestEffects extends Component {
       }
     }
     canvas.restore();
+  }
+
+  void _guardWeather(
+    Canvas canvas,
+    Rect rect,
+    GuardWeather weather,
+    double time,
+  ) {
+    final tint = switch (weather) {
+      GuardWeather.leaves => const Color(0xffffb75c),
+      GuardWeather.crystals => const Color(0xffa1eeff),
+      GuardWeather.embers => const Color(0xffffbb73),
+      GuardWeather.dust => const Color(0xffffe5ae),
+      GuardWeather.fireflies => const Color(0xffd3f59c),
+      _ => const Color(0xffedf8ff),
+    };
+    final rising =
+        weather == GuardWeather.embers || weather == GuardWeather.fireflies;
+    final wind =
+        weather == GuardWeather.breeze || weather == GuardWeather.clouds;
+    // Fixed particle count and analytic positions keep effects stable at every
+    // frame rate. The caller clips all weather to the four-lane field.
+    for (var i = 0; i < (wind ? 7 : 24); i++) {
+      final phase = (time * (wind ? .065 : .045) + i * .137) % 1;
+      final x =
+          rect.left +
+          (i * 47.3 + time * (wind ? 28 : 6) + math.sin(time + i) * 9) %
+              rect.width;
+      final y = rect.top + (rising ? 1 - phase : phase) * rect.height;
+      final alpha =
+          math.sin(phase * math.pi) *
+          (weather == GuardWeather.snow ? .72 : .42);
+      final paint = Paint()..color = tint.withValues(alpha: alpha);
+      if (wind) {
+        final path = Path()
+          ..moveTo(x - 28, y)
+          ..cubicTo(x - 10, y - 7, x + 10, y + 7, x + 30, y);
+        canvas.drawPath(
+          path,
+          paint
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.1,
+        );
+      } else if (weather == GuardWeather.leaves) {
+        canvas.save();
+        canvas.translate(x, y);
+        canvas.rotate(time * .6 + i);
+        canvas.drawOval(const Rect.fromLTWH(-3, -1.4, 6, 2.8), paint);
+        canvas.restore();
+      } else if (weather == GuardWeather.crystals ||
+          weather == GuardWeather.stars) {
+        canvas.drawLine(
+          Offset(x - 2.5, y),
+          Offset(x + 2.5, y),
+          paint..strokeWidth = .8,
+        );
+        canvas.drawLine(Offset(x, y - 3.5), Offset(x, y + 3.5), paint);
+      } else {
+        canvas.drawCircle(
+          Offset(x, y),
+          weather == GuardWeather.snow ? 1.2 + i % 3 * .5 : 1.0 + i % 2 * .4,
+          paint,
+        );
+      }
+    }
   }
 }
 

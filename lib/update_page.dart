@@ -70,7 +70,7 @@ class _GameUpdateGateState extends State<GameUpdateGate> {
         await StoryArt.instance.load(content: content);
       } catch (_) {
         content = null;
-        await StoryArt.instance.load();
+        await StoryArt.instance.load(reset: true);
       }
     } catch (_) {
       if (!mounted) return;
@@ -325,7 +325,7 @@ class _UpdateProgressPageState extends State<UpdateProgressPage>
                             const Padding(
                               padding: EdgeInsets.only(top: 10),
                               child: Text(
-                                '建議使用 Wi-Fi，並預留至少 1.2 GB 空間。也可稍後更新。',
+                                '下載後可離線使用。建議使用 Wi-Fi；所需額外空間約為下載大小的 3 倍。也可稍後更新。',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
                                   fontSize: 12,

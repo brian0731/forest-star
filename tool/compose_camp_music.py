@@ -12,7 +12,7 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parent.parent
 OUTPUT = ROOT / 'output/audio/camp-v1'
-ASSETS = ROOT / 'assets/audio'
+ASSETS = ROOT / 'server/updates/source/legacy-audio'
 BPM, PPQ, RATE = 84, 480, 22050
 SECONDS_PER_BEAT = 60 / BPM
 BARS, BEATS_PER_BAR = 32, 3

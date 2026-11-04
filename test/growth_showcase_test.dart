@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:forest_star/game.dart';
 import 'package:forest_star/main.dart';
+import 'package:forest_star/storybook_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'start_screen_test.dart' show FakeAudio, enterGame;
 
@@ -27,6 +28,7 @@ void main() {
         }
       }
       SharedPreferences.setMockInitialValues({});
+      await tester.runAsync(() => StoryArt.instance.load());
       // A near-threshold test save makes an actual shot reach evolution promptly.
       final state = GameState()
         ..levels = List.filled(6, 2)
@@ -105,4 +107,93 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
     },
   );
+  for (final size in [
+    const Size(393, 852),
+    const Size(360, 640),
+    const Size(768, 1024),
+  ]) {
+    testWidgets('growth backgrounds fill screen and safe insets at $size', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      tester.view.padding = const FakeViewPadding(top: 44, bottom: 34);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      SharedPreferences.setMockInitialValues({});
+      await tester.runAsync(() => StoryArt.instance.load());
+      await tester.pumpWidget(
+        ForestStarApp(
+          prefs: await SharedPreferences.getInstance(),
+          initialState: GameState(),
+          audio: FakeAudio(),
+        ),
+      );
+      final game = await enterGame(tester), session = game.session;
+      for (var i = 0; i < 6; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(const ValueKey('game_surface')),
+      );
+      final before = (await tester.runAsync(() => boundary.toImage()))!;
+      final pixelsBefore = (await tester.runAsync(
+        () => before.toByteData(format: ui.ImageByteFormat.rawRgba),
+      ))!;
+      before.dispose();
+      for (final evolved in [false, true]) {
+        session.queueGrowth(
+          GrowthResult(0, 36, 1, 2, 0, evolved ? 1 : 0, false),
+        );
+        for (var i = 0; i < 15; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+        expect(session.celebration?.evolved, evolved);
+        final image = (await tester.runAsync(() => boundary.toImage()))!;
+        final pixels = (await tester.runAsync(
+          () => image.toByteData(format: ui.ImageByteFormat.rawRgba),
+        ))!;
+        // The overlay must reach every screen corner, including areas outside
+        // the fitted game frame and the simulated notch / home indicator.
+        for (final point in [
+          const Offset(3, 3),
+          Offset(size.width - 4, 3),
+          Offset(3, size.height - 4),
+          Offset(size.width - 4, size.height - 4),
+        ]) {
+          final offset =
+              (point.dy.toInt() * image.width + point.dx.toInt()) * 4;
+          for (var channel = 0; channel < 3; channel++) {
+            final expected =
+                pixelsBefore.getUint8(offset + channel) * .07 +
+                [16, 47, 50][channel] * .93;
+            expect(
+              pixels.getUint8(offset + channel),
+              closeTo(expected, 4),
+              reason:
+                  'Screen corner $point, channel $channel, evolved=$evolved',
+            );
+          }
+        }
+        if (Platform.environment['FOREST_GROWTH_CAPTURE'] == '1') {
+          final directory = Directory('output/review/growth-fullscreen')
+            ..createSync(recursive: true);
+          final png = (await tester.runAsync(
+            () => image.toByteData(format: ui.ImageByteFormat.png),
+          ))!;
+          File(
+            '${directory.path}/${evolved ? 'evolution' : 'upgrade'}-${size.width.toInt()}x${size.height.toInt()}.png',
+          ).writeAsBytesSync(png.buffer.asUint8List());
+        }
+        image.dispose();
+        await tester.tapAt(game.layout!.toScreen(const Offset(240, 737)));
+        await tester.pump(const Duration(milliseconds: 16));
+        expect(session.celebration, isNull);
+      }
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump(const Duration(milliseconds: 100));
+    });
+  }
 }

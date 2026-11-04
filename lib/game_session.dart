@@ -8,6 +8,9 @@ import 'audio.dart';
 import 'game.dart';
 import 'vfx_event.dart';
 import 'interaction_motion.dart';
+import 'companion_layout.dart';
+import 'package:flutter/foundation.dart';
+import 'ultimate_spell.dart';
 
 /// Persistent game rules, independent of Flutter rebuilds and display refresh rate.
 class GameSession {
@@ -51,11 +54,12 @@ class GameSession {
     };
     combat.onAttack = () => audio.play(SoundEffect.hit);
     combat.onImpact = (position, friend) => emit(
-      friend == 2
+      friends[friend].element == 2
           ? VfxKind.fire
-          : friend == 1
+          : friends[friend].element == 1
           ? VfxKind.water
-          : friend == 0 || friend == 3
+          : friends[friend].element == 0 ||
+                friends[friend].skill == FriendSkill.guard
           ? VfxKind.leaf
           : VfxKind.stars,
       position,
@@ -92,6 +96,8 @@ class GameSession {
   final bool persist;
   final pinball = Pinball(), combat = Combat();
   final motion = InteractionMotion();
+  UltimateCast? ultimate;
+  final ultimatePlaying = ValueNotifier(false);
   final effects = Queue<VfxEvent>();
   final _growthQueue = Queue<GrowthResult>();
   GrowthResult? celebration;
@@ -114,6 +120,8 @@ class GameSession {
   bool _lifecycleActive = true;
   final _externalOverlays = <String>{};
   void Function()? onAdRequested;
+  void Function()? onGachaRequested;
+  void Function()? onPetGalleryRequested;
   String? adLabel;
   String toast = '', resultTitle = '', resultDetail = '';
   double time = 0, toastUntil = 0, resetUntil = 0, accumulator = 0;
@@ -148,7 +156,21 @@ class GameSession {
         }
       }
       final health = combat.health, wave = combat.wave;
-      if (celebration == null) {
+      final cast = ultimate;
+      if (cast != null) {
+        cast.age += fixedStep;
+        if (!cast.impacted && cast.age + 1e-10 >= UltimateCast.impactTime) {
+          cast.impacted = true;
+          combat.resolveUltimate(cast.lane);
+          audio.play(SoundEffect.magicImpact);
+        }
+        if (cast.age + 1e-10 >= UltimateCast.duration) {
+          ultimate = null;
+          ultimatePlaying.value = false;
+          inputGeneration++;
+        }
+      }
+      if (celebration == null && ultimate == null) {
         pinball.tick(fixedStep);
         combat.tick(fixedStep);
       }
@@ -173,6 +195,8 @@ class GameSession {
       prefs.setString('forest_star_v1', jsonEncode(state.toJson()));
     }
   }
+
+  void cancelPendingSave() => _saveTimer?.cancel();
 
   void setForeground(bool value) {
     _lifecycleActive = value;
@@ -200,6 +224,7 @@ class GameSession {
   }
 
   void dispose() {
+    ultimatePlaying.dispose();
     effects.clear();
     _growthQueue.clear();
     motion.cues.clear();
@@ -231,6 +256,7 @@ class GameSession {
   /// Shared control regions let release-outside cancel rather than trigger
   /// another action. Decorative scenery and the aim surface have no button.
   Rect? controlAt(Offset p) {
+    if (ultimate != null) return null;
     final regions = <Rect>[];
     if (result) {
       regions.add(const Rect.fromLTWH(69, 536, 342, 60));
@@ -257,10 +283,19 @@ class GameSession {
         regions.add(Rect.fromLTWH(i * 120.0, 819, 120, 81));
       }
       if (tab == 1) {
-        for (var i = 0; i < 6; i++) {
-          regions.add(
-            Rect.fromLTWH(24 + i % 3 * 149.0, 220 + i ~/ 3 * 151.0, 132, 140),
-          );
+        regions.addAll([
+          CompanionLayout.gallery,
+          CompanionLayout.previous,
+          CompanionLayout.next,
+          for (
+            var page = 0;
+            page < CompanionLayout.pageCount(friends.length);
+            page++
+          )
+            CompanionLayout.page(page),
+        ]);
+        for (var i = 0; i < 6 && selected ~/ 6 * 6 + i < friends.length; i++) {
+          regions.add(CompanionLayout.card(i));
         }
         if (!state.unlocked[selected]) {
           regions.add(const Rect.fromLTWH(24, 698, 432, 52));
@@ -274,6 +309,13 @@ class GameSession {
           regions.add(Rect.fromLTWH(118 + i * 85.0, 758, 80, 43));
         }
       } else {
+        if (tab == 2 && combat.active) {
+          for (var lane = 0; lane < BattleLayout.lanes; lane++) {
+            if (combat.team[lane] >= 0 && !combat.ultimateUsed[lane]) {
+              regions.add(BattleLayout.ultimateButton(lane));
+            }
+          }
+        }
         if (!(tab == 0 ? pinball.active : combat.active)) {
           regions.add(const Rect.fromLTWH(24, 754, 311, 53));
         }
@@ -322,6 +364,7 @@ class GameSession {
 
   void open(int destination) {
     if (result ||
+        ultimate != null ||
         celebration != null ||
         !foreground ||
         destination < 0 ||
@@ -338,8 +381,15 @@ class GameSession {
     click();
   }
 
+  void selectCompanion(int id) {
+    if (id < 0 || id >= friends.length) return;
+    selected = id;
+    motion.select(id);
+    click();
+  }
+
   void tap(Offset p) {
-    if (!foreground) return;
+    if (!foreground || ultimate != null) return;
     if (result) {
       if (inside(p, 69, 536, 342, 60)) {
         result = false;
@@ -371,11 +421,27 @@ class GameSession {
       return;
     }
     if (tab == 1) {
-      for (var i = 0; i < 6; i++) {
-        if (inside(p, 24 + i % 3 * 149, 220 + i ~/ 3 * 151, 132, 140)) {
-          selected = i;
-          motion.select(i);
-          click();
+      if (CompanionLayout.gallery.contains(p)) {
+        click();
+        onPetGalleryRequested?.call();
+        return;
+      }
+      final pages = CompanionLayout.pageCount(friends.length);
+      if (CompanionLayout.previous.contains(p) ||
+          CompanionLayout.next.contains(p)) {
+        final direction = CompanionLayout.previous.contains(p) ? -1 : 1;
+        selectCompanion(((selected ~/ 6 + direction) % pages) * 6);
+        return;
+      }
+      for (var page = 0; page < pages; page++) {
+        if (CompanionLayout.page(page).contains(p)) {
+          selectCompanion(page * 6);
+          return;
+        }
+      }
+      for (var i = 0; i < 6 && selected ~/ 6 * 6 + i < friends.length; i++) {
+        if (CompanionLayout.card(i).contains(p)) {
+          selectCompanion(selected ~/ 6 * 6 + i);
           return;
         }
       }
@@ -389,6 +455,10 @@ class GameSession {
             oldEvolution = state.evolutions[selected];
         final wasUnlocked = state.unlocked[selected];
         if (!state.unlocked[selected]) {
+          if (selected >= 6) {
+            onGachaRequested?.call();
+            return;
+          }
           success = state.unlock(selected);
           notify(success ? '新朋友加入了！' : '星糖不足，去彈珠台收集吧。');
         } else if (p.dx < 240) {
@@ -439,6 +509,14 @@ class GameSession {
         return;
       }
     }
+    if (tab == 2 && combat.active) {
+      for (var lane = 0; lane < BattleLayout.lanes; lane++) {
+        if (BattleLayout.ultimateButton(lane).contains(p)) {
+          castUltimate(lane);
+          return;
+        }
+      }
+    }
     if (tab == 2 && !combat.active) {
       if (inside(p, 24, 754, 311, 53)) {
         combat.begin(state);
@@ -464,23 +542,41 @@ class GameSession {
         click();
         save();
       } else if (inside(p, withAds ? 344 : 324, 820, withAds ? 116 : 136, 58)) {
-        if (time < resetUntil) {
-          if (combat.active || pinball.active) {
-            notify('請先等待本次遊玩結束。');
-            return;
-          }
-          state = GameState();
-          audio.setEnabled(state.sound);
-          pinball.resetBoard();
-          selected = 0;
-          resetUntil = 0;
-          save();
-          notify('已開始新的森林旅程。');
+        if (combat.active || pinball.active) {
+          notify('本次遊玩結束後即可前往星願轉珠。');
         } else {
-          resetUntil = time + 3;
-          notify('三秒內再按一次，即會清除試玩進度。');
+          click();
+          onGachaRequested?.call();
         }
       }
     }
+  }
+
+  bool castUltimate(int lane) {
+    if (!foreground ||
+        tab != 2 ||
+        result ||
+        celebration != null ||
+        ultimate != null) {
+      return false;
+    }
+    if (!combat.reserveUltimate(lane)) {
+      if (combat.active &&
+          lane >= 0 &&
+          lane < 4 &&
+          !combat.ultimateUsed[lane] &&
+          combat.team[lane] >= 0) {
+        notify('等敵人出現，再施放大招！');
+      }
+      return false;
+    }
+    final id = combat.team[lane];
+    ultimate = UltimateCast(lane, id, friends[id].ultimateKind);
+    inputGeneration++;
+    motion.cancelInput();
+    dragging = false;
+    ultimatePlaying.value = true;
+    audio.play(SoundEffect.magicCharge);
+    return true;
   }
 }

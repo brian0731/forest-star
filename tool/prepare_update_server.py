@@ -97,7 +97,7 @@ def prepare_site(target, version):
     for key, kind, source, filename in [
         ('camp', 'image', ROOT / 'assets/storybook/camp.webp', 'camp.webp'),
         ('board', 'image', ROOT / 'assets/storybook/pinball-board-v2.webp', 'pinball-board.webp'),
-        ('camp-music', 'audio', ROOT / 'assets/audio/forest_camp.wav', 'forest-camp.wav'),
+        ('camp-music', 'audio', ROOT / 'server/updates/source/legacy-audio/forest_camp.wav', 'forest-camp.wav'),
         ('levels', 'levels', ROOT / 'server/updates/examples/levels-v1.json', 'levels.json'),
     ]:
         if kind == 'levels':

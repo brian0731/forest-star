@@ -66,7 +66,7 @@ const tutorialLessons = [
   ),
   TutorialLesson(
     1,
-    Rect.fromLTWH(24, 220, 432, 291),
+    Rect.fromLTWH(24, 216, 432, 264),
     '認識你的夥伴',
     'Meet your companions',
     '點選夥伴可以查看能力。每位夥伴的攻擊方式都不同；我們先選芽耳兔來練習升級。',
@@ -114,9 +114,9 @@ const tutorialLessons = [
     Rect.fromLTWH(24, 290, 432, 350),
     '觀察戰況，再調整隊伍',
     'Watch and improve your team',
-    '敵人會沿四條路進攻。勝利能獲得資源；如果失敗，升級夥伴及調整隊伍後可以再試。',
-    'Enemies approach along four lanes. Winning earns resources. If you lose, upgrade your companions, adjust your team, and try again.',
-    '敵人會沿住四條路進攻。贏咗就有資源；輸咗都唔緊要，升級夥伴、調整隊伍，再試過！',
+    '敵人會沿四條路進攻。每場戰鬥，每路可施放一次大招，攻擊全場敵人。勝利能獲得資源；失敗後可升級夥伴再試。',
+    'Enemies approach along four lanes. Each lane can cast one ultimate per battle to strike the whole field. Winning earns resources. Upgrade your team and retry if needed.',
+    '敵人會沿住四條路進攻。每場每路都可以出一次大招，攻擊全場敵人。贏咗就有資源；輸咗可以升級夥伴再試！',
   ),
   TutorialLesson(
     3,
@@ -148,8 +148,8 @@ GameSession createTutorialSession(SharedPreferences prefs) {
     ..sugar = 300
     ..dew = 12
     ..marbles = 40
-    ..levels = List.filled(6, 2)
-    ..unlocked = List.filled(6, true)
+    ..levels = List.filled(friends.length, 2)
+    ..unlocked = List.generate(friends.length, (id) => id < 6)
     ..sound = false;
   return GameSession(state, prefs, _PracticeAudio(), persist: false);
 }
