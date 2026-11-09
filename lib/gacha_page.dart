@@ -110,7 +110,7 @@ class _GachaPageState extends State<GachaPage>
             '${product.price} · 一次性消耗型商品，非訂閱。\n\n'
             '每次隨機獲得一項：\n寵物 30%（20 隻各 1.5%）\n星糖 45% · 彈珠 25%\n'
             '不保證獲得寵物，重複寵物轉為 40 成長分。\n\n'
-            '付款由 ${controller.billing?.platform == 'ios' ? 'App Store' : 'Google Play'} 處理。購買後須連線轉珠；免費次數會優先使用。',
+            '付款由應用程式商店處理。購買後須連線轉珠；免費次數會優先使用。',
           ),
         ),
         actions: [

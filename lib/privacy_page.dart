@@ -25,7 +25,7 @@ class PrivacyPage extends StatelessWidget {
                   Text(
                     ads!.settings.production
                         ? '自選獎勵式廣告'
-                        : '目前為 Google 官方測試廣告，不會產生收益。',
+                        : '目前為官方測試廣告，不會產生收益。',
                   ),
                   if (ads!.privacyOptionsRequired)
                     Padding(

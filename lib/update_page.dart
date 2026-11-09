@@ -189,7 +189,7 @@ class _UpdateProgressPageState extends State<UpdateProgressPage>
       }
     } catch (_) {
       if (mounted) {
-        setState(() => _linkError = '未能開啟商店，請稍後從 App Store／Google Play 更新。');
+        setState(() => _linkError = '未能開啟商店，請稍後再試。');
       }
     }
   }
