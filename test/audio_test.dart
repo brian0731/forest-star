@@ -5,6 +5,19 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:forest_star/audio.dart';
+import 'package:forest_star/tutorial_narrator.dart';
+import 'package:forest_star/tutorial_recorded_narrator.dart';
+
+class TestFallbackNarrator extends TutorialNarrator {
+  final spoken = <String>[];
+  @override
+  NarrationStatus get status => NarrationStatus.idle;
+  @override
+  Future<void> speak(String text, TutorialLanguage language) async =>
+      spoken.add(text);
+  @override
+  Future<void> stop() async {}
+}
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -141,6 +154,20 @@ void main() {
       await until(() => count('dispose') == 6);
       expect(sources(), hasLength(failedSourceCount));
       expect(count('resume'), 5);
+      final fallback = TestFallbackNarrator();
+      final recorded = RecordedTutorialNarrator({
+        (TutorialLanguage.english, 'lesson'): 'tutorial/en-US/1.mp3',
+        (TutorialLanguage.chinese, 'missing'): 'tutorial/zh-TW/missing.mp3',
+      }, fallback: fallback);
+      await recorded.speak('lesson', TutorialLanguage.english);
+      expect(sources().last.arguments['url'], contains('tutorial/en-US/1.mp3'));
+      expect(recorded.status, NarrationStatus.speaking);
+      await recorded.stop();
+      expect(recorded.status, NarrationStatus.idle);
+      await recorded.speak('missing', TutorialLanguage.chinese);
+      expect(fallback.spoken, ['missing']);
+      recorded.dispose();
+      await until(() => count('dispose') == 7);
     },
   );
 }

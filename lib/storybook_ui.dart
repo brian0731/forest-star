@@ -10,6 +10,7 @@ import 'content_updates.dart';
 import 'guard_themes.dart';
 import 'companion_layout.dart';
 import 'ultimate_spell.dart';
+import 'game_features.dart';
 
 class StoryArt {
   StoryArt._();
@@ -803,7 +804,7 @@ class GamePainter extends CustomPainter {
         state.unlocked[i]
             ? 'Lv.${state.levels[i]} · ${state.levels[i] >= 10 ? '成長已滿' : '${state.growth[i]}/${state.growthCost(i)} 分'}'
             : i >= 6
-            ? '星願轉珠可結識'
+            ? (drawsEnabled ? '星願轉珠可結識' : '尚未解鎖')
             : '成長 ${state.growth[i]}/40 可結識',
         10,
         muted,
@@ -880,7 +881,9 @@ class GamePainter extends CustomPainter {
         698,
         432,
         52,
-        selected >= 6 ? '前往星願轉珠結識' : '結識 ${f.name}  ·  80 星糖',
+        selected >= 6
+            ? (drawsEnabled ? '前往星願轉珠結識' : '尚未解鎖')
+            : '結識 ${f.name}  ·  80 星糖',
       );
     } else {
       button(
@@ -1339,8 +1342,13 @@ class GamePainter extends CustomPainter {
       align: TextAlign.center,
     );
     final labels = adLabel == null
-        ? ['補給 +12', state.sound ? '聲音：開啟' : '聲音：關閉', '星願轉珠']
-        : ['免費 +12', adLabel!, state.sound ? '聲音：開啟' : '聲音：關閉', '星願轉珠'];
+        ? ['補給 +12', state.sound ? '聲音：開啟' : '聲音：關閉', if (drawsEnabled) '星願轉珠']
+        : [
+            '免費 +12',
+            adLabel!,
+            state.sound ? '聲音：開啟' : '聲音：關閉',
+            if (drawsEnabled) '星願轉珠',
+          ];
     for (var i = 0; i < labels.length; i++) {
       final x = 20.0 + i * (adLabel == null ? 152 : 108);
       final width = adLabel == null
@@ -1361,8 +1369,8 @@ class GamePainter extends CustomPainter {
             : i == 2
             ? 11
             : 13,
-        i == labels.length - 1 ? muted : green,
-        bold: i != labels.length - 1,
+        drawsEnabled && i == labels.length - 1 ? muted : green,
+        bold: !drawsEnabled || i != labels.length - 1,
         align: TextAlign.center,
       );
       if (i < labels.length - 1)

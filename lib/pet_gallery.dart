@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'game.dart';
+import 'game_features.dart';
 
 /// One scrollable album, including friends the player has not met yet.
 class PetGalleryPage extends StatelessWidget {
@@ -241,7 +242,9 @@ class _PetCard extends StatelessWidget {
                       ? (state.evolutions[id] > 0
                             ? '進化 ${state.evolutions[id]} / 2'
                             : '一起冒險吧')
-                      : (id >= 6 ? '星願轉珠可結識' : '到小屋結識新朋友'),
+                      : (id >= 6
+                            ? (drawsEnabled ? '星願轉珠可結識' : '尚未解鎖')
+                            : '到小屋結識新朋友'),
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 10,

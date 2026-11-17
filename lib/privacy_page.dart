@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'rewarded_ads.dart';
 
 class PrivacyPage extends StatelessWidget {
   const PrivacyPage({super.key, this.ads});
   final RewardedAdsController? ads;
-  static final _policy = rootBundle.loadString('assets/privacy-policy.txt');
+  static Future<String> get _policy => rootBundle.loadString(
+    !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS
+        ? 'assets/privacy-policy-ios.txt'
+        : 'assets/privacy-policy.txt',
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -23,9 +28,7 @@ class PrivacyPage extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    ads!.settings.production
-                        ? '自選獎勵式廣告'
-                        : '目前為官方測試廣告，不會產生收益。',
+                    ads!.settings.production ? '自選獎勵式廣告' : '目前為官方測試廣告，不會產生收益。',
                   ),
                   if (ads!.privacyOptionsRequired)
                     Padding(

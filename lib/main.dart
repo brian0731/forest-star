@@ -18,6 +18,7 @@ import 'start_screen.dart';
 import 'gacha_store.dart';
 import 'gacha_page.dart';
 import 'pet_gallery.dart';
+import 'game_features.dart';
 export 'start_screen.dart' show StartScreen;
 export 'storybook_ui.dart' show GamePainter;
 export 'forest_flame_game.dart' show campSprites, campSpriteBounds;
@@ -54,7 +55,8 @@ Future<void> main() async {
         billing:
             !kIsWeb &&
                 (defaultTargetPlatform == TargetPlatform.android ||
-                    defaultTargetPlatform == TargetPlatform.iOS)
+                    defaultTargetPlatform == TargetPlatform.iOS) &&
+                drawsEnabled
             ? NativeBillingStore()
             : null,
         audio: AppAudio(
@@ -92,7 +94,7 @@ class _ForestStarAppState extends State<ForestStarApp>
   late final GameSession session;
   late final ForestFlameGame game;
   late final NoticeBoardController notices;
-  late final GachaController gacha;
+  GachaController? gacha;
   bool started = false;
   bool _dialogOpen = false;
   final _navigator = GlobalKey<NavigatorState>();
@@ -107,10 +109,12 @@ class _ForestStarAppState extends State<ForestStarApp>
       widget.audio ?? AppAudio(),
     );
     game = ForestFlameGame(session);
-    gacha = GachaController(session, billing: widget.billing);
-    session.onGachaRequested = () => unawaited(_showGacha());
+    if (drawsEnabled) {
+      gacha = GachaController(session, billing: widget.billing);
+      session.onGachaRequested = () => unawaited(_showGacha());
+      unawaited(gacha!.initialize());
+    }
     session.onPetGalleryRequested = () => unawaited(_showPetGallery());
-    unawaited(gacha.initialize());
     notices = widget.noticeBoard ?? NoticeBoardController(prefs: widget.prefs);
     if (widget.noticeBoard == null) unawaited(notices.refresh());
     final ads = widget.ads;
@@ -224,12 +228,19 @@ class _ForestStarAppState extends State<ForestStarApp>
   }
 
   Future<void> _showGacha() async {
-    if (_dialogOpen || widget.ads?.busy == true) return;
+    final controller = gacha;
+    if (!drawsEnabled ||
+        controller == null ||
+        _dialogOpen ||
+        widget.ads?.busy == true)
+      return;
     _dialogOpen = true;
     session.setExternalOverlay(true, source: 'gacha');
     try {
       await _navigator.currentState!.push(
-        MaterialPageRoute<void>(builder: (_) => GachaPage(controller: gacha)),
+        MaterialPageRoute<void>(
+          builder: (_) => GachaPage(controller: controller),
+        ),
       );
     } finally {
       if (mounted) session.setExternalOverlay(false, source: 'gacha');
@@ -267,7 +278,7 @@ class _ForestStarAppState extends State<ForestStarApp>
     game.pauseEngine();
     widget.ads?.removeListener(_syncAdLabel);
     widget.ads?.dispose();
-    gacha.dispose();
+    gacha?.dispose();
     session.dispose();
     if (widget.noticeBoard == null) notices.dispose();
     super.dispose();
@@ -336,7 +347,7 @@ class _ForestStarAppState extends State<ForestStarApp>
                             ),
                           ),
                         ),
-                      if (!casting)
+                      if (!casting && drawsEnabled)
                         Positioned(
                           right: 8,
                           top: 0,

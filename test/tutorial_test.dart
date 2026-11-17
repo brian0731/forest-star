@@ -57,6 +57,20 @@ Future<void> capture(WidgetTester tester, String name) async {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  test('all lessons have recorded audio in each tutorial language', () async {
+    final assets = (await AssetManifest.loadFromAssetBundle(
+      rootBundle,
+    )).listAssets().toSet();
+    expect(tutorialLessons, hasLength(10));
+    for (final language in TutorialLanguage.values) {
+      for (var lesson = 1; lesson <= tutorialLessons.length; lesson++) {
+        expect(
+          assets,
+          contains('assets/tutorial/${language.code}/$lesson.mp3'),
+        );
+      }
+    }
+  });
   setUpAll(() async {
     if (Platform.environment['FOREST_TUTORIAL_CAPTURE'] != '1') return;
     final bytes = File('assets/fonts/NotoSansTC.ttf').readAsBytesSync();

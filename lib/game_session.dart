@@ -11,6 +11,7 @@ import 'interaction_motion.dart';
 import 'companion_layout.dart';
 import 'package:flutter/foundation.dart';
 import 'ultimate_spell.dart';
+import 'game_features.dart';
 
 /// Persistent game rules, independent of Flutter rebuilds and display refresh rate.
 class GameSession {
@@ -456,7 +457,7 @@ class GameSession {
         final wasUnlocked = state.unlocked[selected];
         if (!state.unlocked[selected]) {
           if (selected >= 6) {
-            onGachaRequested?.call();
+            if (drawsEnabled) onGachaRequested?.call();
             return;
           }
           success = state.unlock(selected);
@@ -541,7 +542,8 @@ class GameSession {
         audio.setEnabled(state.sound);
         click();
         save();
-      } else if (inside(p, withAds ? 344 : 324, 820, withAds ? 116 : 136, 58)) {
+      } else if (drawsEnabled &&
+          inside(p, withAds ? 344 : 324, 820, withAds ? 116 : 136, 58)) {
         if (combat.active || pinball.active) {
           notify('本次遊玩結束後即可前往星願轉珠。');
         } else {

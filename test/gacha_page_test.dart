@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -29,6 +30,47 @@ class PetRandom implements Random {
 }
 
 void main() {
+  testWidgets('iOS hides draws and does not initialize purchases', (
+    tester,
+  ) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+    tester.view.physicalSize = const Size(480, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
+    await tester.runAsync(() => StoryArt.instance.load());
+    final billing = FakeBilling();
+    addTearDown(billing.stream.close);
+    final notices = NoticeBoardController(prefs: prefs);
+    await tester.pumpWidget(
+      ForestStarApp(
+        prefs: prefs,
+        initialState: GameState(),
+        audio: FakeAudio(),
+        noticeBoard: notices,
+        billing: billing,
+      ),
+    );
+    final game = await enterGame(tester);
+    expect(find.byTooltip('星願轉珠 · 每日免費 5 次'), findsNothing);
+    expect(billing.stream.hasListener, isFalse);
+    await gameTap(tester, game, const Offset(400, 848));
+    expect(find.byType(GachaPage), findsNothing);
+    expect(game.session.onGachaRequested, isNull);
+    await gameTap(tester, game, campSpriteBounds[1].center);
+    for (var i = 0; i < 6; i++) {
+      await gameTap(tester, game, CompanionLayout.next.center);
+    }
+    await gameTap(tester, game, const Offset(200, 724));
+    expect(find.byType(GachaPage), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump(const Duration(milliseconds: 100));
+    notices.dispose();
+    debugDefaultTargetPlatformOverride = null;
+  });
   final capture = Platform.environment['FOREST_GACHA_CAPTURE'] == '1';
   for (final spec in [
     (const Size(393, 852), 1.0),

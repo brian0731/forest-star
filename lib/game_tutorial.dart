@@ -9,6 +9,7 @@ import 'forest_flame_game.dart';
 import 'game.dart';
 import 'game_session.dart';
 import 'tutorial_narrator.dart';
+import 'tutorial_recorded_narrator.dart';
 
 const tutorialCompletedKey = 'forest_tutorial_completed_v1';
 const tutorialLanguageKey = 'forest_tutorial_language';
@@ -183,7 +184,15 @@ class _GameTutorialPageState extends State<GameTutorialPage>
     });
   });
   late final TutorialNarrator _narrator =
-      widget.narrator ?? DeviceTutorialNarrator();
+      widget.narrator ??
+      RecordedTutorialNarrator({
+        for (var i = 0; i < tutorialLessons.length; i++)
+          for (final language in TutorialLanguage.values)
+            (
+              language,
+              '${tutorialLessons[i].title(language)}。${tutorialLessons[i].body(language)}',
+            ): 'tutorial/${language.code}/${i + 1}.mp3',
+      });
   late TutorialLanguage _language = TutorialLanguage.fromCode(
     widget.prefs.getString(tutorialLanguageKey),
   );
